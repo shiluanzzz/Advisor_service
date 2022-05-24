@@ -10,6 +10,10 @@ var (
 	DbUser     string
 	DbPassword string
 	DbName     string
+
+	HttpPort string
+	AppMode  string
+	JwtKey   string
 )
 
 func init() {
@@ -18,6 +22,7 @@ func init() {
 		log.Fatalln("read config file error", err)
 	}
 	LoadDBConfig(file)
+	LoadServer(file)
 }
 func LoadDBConfig(file *ini.File) {
 	var err error
@@ -30,4 +35,10 @@ func LoadDBConfig(file *ini.File) {
 	if err != nil {
 		log.Fatalln("database port error")
 	}
+}
+
+func LoadServer(file *ini.File) {
+	AppMode = file.Section("server").Key("AppMode").MustString("debug")
+	HttpPort = file.Section("server").Key("HttpPort").MustString(":8000")
+	JwtKey = file.Section("server").Key("JwyKey").MustString("fdasasferqw")
 }

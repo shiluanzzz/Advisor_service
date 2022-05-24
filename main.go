@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"service/routes"
 	"service/utils"
 )
 
 func main() {
-	fmt.Println(utils.Db)
+	utils.InitDB()
+	routes.InitRouter()
 }
