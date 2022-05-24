@@ -122,7 +122,24 @@ func ChangeUserPWD(username, newPwd string) int {
 	return errmsg.SUCCESS
 }
 
-// GetUser 获取用户的全部信息，测试用.
-func GetUser() {
-
+// GetUser 获取用户的全部信息 也可以当作Login用
+func GetUser(username string) (int, model.User) {
+	where := map[string]interface{}{
+		"name": username,
+	}
+	selects := []string{"name", "phone", "birth", "gender", "bio", "about", "coin"}
+	cond, values, err := qb.BuildSelect(USERTABLE, where, selects)
+	if err != nil {
+		log.Println("gendry SQL生成错误", err)
+		return errmsg.ERROR_SQL_BUILD, model.User{}
+	}
+	row := utils.DbConn.QueryRow(cond, values...)
+	res := model.User{}
+	// 能不能直接自动赋值到结构体对应的字段?
+	err = row.Scan(&res.Name, &res.Phone, &res.Birth, &res.Gender, &res.Bio, &res.About, &res.Coin)
+	if err != nil {
+		log.Println("数据库查询用户信息出错", err)
+		return errmsg.ERROR_MYSQL, model.User{}
+	}
+	return errmsg.SUCCESS, res
 }

@@ -3,6 +3,7 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"service/middleware"
 	"service/model"
 	"service/service"
 	"service/utils/errmsg"
@@ -45,11 +46,38 @@ func UpdateUserPwd(ctx *gin.Context) {
 	username := ctx.PostForm("username")
 	oldPwd := ctx.PostForm("oldPwd")
 	newPwd := ctx.PostForm("newPwd")
+	// 检查密码是否正确
 	code := service.CheckRolePwd(service.USERTABLE, username, oldPwd)
+
 	if code == errmsg.SUCCESS {
+		// update
 		code = service.ChangeUserPWD(username, newPwd)
 	}
 	ctx.JSON(http.StatusOK, gin.H{
 		"msg": errmsg.GetErrMsg(code),
+	})
+}
+func UserLogin(ctx *gin.Context) {
+	username := ctx.Query("username")
+	Pwd := ctx.Query("password")
+	// 检查用户密码是否正确 里面包含了用户不存在的情况
+	code := service.CheckRolePwd(service.USERTABLE, username, Pwd)
+	var token string
+	if code == errmsg.SUCCESS {
+		token, code = middleware.NewToken(username)
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg":   errmsg.GetErrMsg(code),
+		"token": token,
+	})
+}
+
+func GetUserInfo(ctx *gin.Context) {
+	//这个username 是token鉴权成功后写入到请求中的
+	username := ctx.GetString("username")
+	code, data := service.GetUser(username)
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg":  errmsg.GetErrMsg(code),
+		"data": data,
 	})
 }
