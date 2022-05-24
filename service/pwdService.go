@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	qb "github.com/didi/gendry/builder"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -45,8 +46,12 @@ func CheckRolePwd(table, username string, pwd string) int {
 	rows := utils.DbConn.QueryRow(cond, value...)
 	err = rows.Scan(&encryptPwd)
 	if err != nil {
-		log.Println("数据查询用户密码错误", err)
-		return errmsg.ERROR_PASSWORD_WORON
+		if err == sql.ErrNoRows {
+			return errmsg.ERROR_USER_NOT_EXIST
+		} else {
+			log.Println("数据查询用户密码错误", err)
+			return errmsg.ERROR_PASSWORD_WORON
+		}
 	}
 	// 查到了加密密码在比对
 	return CheckPwd(pwd, encryptPwd)
