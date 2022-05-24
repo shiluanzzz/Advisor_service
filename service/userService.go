@@ -98,8 +98,28 @@ func UpdateUser(user *model.User) int {
 }
 
 // ChangeUserPWD 更改用户密码
-func ChangeUserPWD() {
-
+func ChangeUserPWD(username, newPwd string) int {
+	// 密码加密
+	newPwd = GetPwd(newPwd)
+	// 构造sql
+	where := map[string]interface{}{
+		"name": username,
+	}
+	updates := map[string]interface{}{
+		"password": newPwd,
+	}
+	// 构造sql 执行更新
+	cond, vals, err := qb.BuildUpdate(USERTABLE, where, updates)
+	if err != nil {
+		log.Println("gendry SQL生成错误", err)
+		return errmsg.ERROR_SQL_BUILD
+	}
+	_, err = utils.DbConn.Exec(cond, vals...)
+	if err != nil {
+		log.Println("数据库更新数据出错", err)
+		return errmsg.ERROR_MYSQL
+	}
+	return errmsg.SUCCESS
 }
 
 // GetUser 获取用户的全部信息，测试用.

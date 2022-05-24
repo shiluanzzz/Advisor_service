@@ -13,6 +13,7 @@ func InitRouter() {
 	{
 		UserRouter.POST("/add", v1.NewUserController)
 		UserRouter.POST("/update", v1.UpdateUserInfoController)
+		UserRouter.POST("/changepwd", v1.UpdateUserPwd)
 	}
 
 	err := r.Run(utils.HttpPort)

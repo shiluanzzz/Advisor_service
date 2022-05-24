@@ -42,5 +42,14 @@ func UpdateUserInfoController(ctx *gin.Context) {
 }
 
 func UpdateUserPwd(ctx *gin.Context) {
-
+	username := ctx.PostForm("username")
+	oldPwd := ctx.PostForm("oldPwd")
+	newPwd := ctx.PostForm("newPwd")
+	code := service.CheckRolePwd(service.USERTABLE, username, oldPwd)
+	if code == errmsg.SUCCESS {
+		code = service.ChangeUserPWD(username, newPwd)
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg": errmsg.GetErrMsg(code),
+	})
 }
