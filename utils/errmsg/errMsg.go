@@ -12,6 +12,11 @@ const (
 	// 服务器内部错误,SQL编译等
 	ERROR_SQL_BUILD
 	ERROR_MYSQL
+	// TOKEN相关错误
+	ERROR_TOKEN_NOT_EXIST
+	ERROR_TOKEN_TIME_OUT
+	ERROR_TOKEN_WOKEN_WRONG
+	ERROR_TOKEN_TYPE_WRONG
 )
 
 var errMsg = map[int]string{
@@ -24,6 +29,12 @@ var errMsg = map[int]string{
 	//服务器内部错误
 	ERROR_SQL_BUILD: "服务器内部错误",
 	ERROR_MYSQL:     "数据库操作错误",
+
+	// TOKEN相关错误
+	ERROR_TOKEN_NOT_EXIST:   "TOKEN不存在",
+	ERROR_TOKEN_TIME_OUT:    "TOKEN超时",
+	ERROR_TOKEN_WOKEN_WRONG: "TOKEN错误",
+	ERROR_TOKEN_TYPE_WRONG:  "TOKEN格式错误",
 }
 
 func GetErrMsg(code int) string {

@@ -19,9 +19,9 @@ func GetPwd(pwd string) string {
 	return string(hashPwd)
 }
 
-// CheckPwd 检查用户输入的密码和数据库中加密的密码是否一致
-// CheckPwd pwd:用户输入的密码 encryptPwd 数据库中加密的密码
-func CheckPwd(pwd string, encryptPwd string) int {
+// checkPwd 检查用户输入的密码和数据库中加密的密码是否一致
+// checkPwd pwd:用户输入的密码 encryptPwd 数据库中加密的密码
+func checkPwd(pwd string, encryptPwd string) int {
 	err := bcrypt.CompareHashAndPassword([]byte(encryptPwd), []byte(pwd))
 	if err != nil {
 		return errmsg.ERROR_PASSWORD_WORON
@@ -54,5 +54,5 @@ func CheckRolePwd(table, username string, pwd string) int {
 		}
 	}
 	// 查到了加密密码在比对
-	return CheckPwd(pwd, encryptPwd)
+	return checkPwd(pwd, encryptPwd)
 }
