@@ -1,5 +1,6 @@
 package service
 
+// 一些user、advisor都会用到的service接口 例如密码、手机号码重复校验等。
 import (
 	"database/sql"
 	qb "github.com/didi/gendry/builder"
@@ -8,6 +9,37 @@ import (
 	"service/utils"
 	"service/utils/errmsg"
 )
+
+// CheckPhoneExist 检查手机号是否重复 true=已经存在 false=不存在
+func CheckPhoneExist(tableName, phone string) int {
+	// 生产sql语句
+	where := map[string]interface{}{
+		"phone": phone,
+	}
+	selectFields := []string{"phone"}
+	cond, values, err := qb.BuildSelect(tableName, where, selectFields)
+	if err != nil {
+		log.Println("gendry SQL生成错误", err)
+		return errmsg.ERROR_SQL_BUILD
+	}
+	// 查询
+	rows, err := utils.DbConn.Query(cond, values...)
+	if err != nil {
+		log.Println("数据库查询错误", err)
+		return errmsg.ERROR_MYSQL
+	}
+	// 判断是否存在重复key
+	var flag = false
+	for rows.Next() {
+		flag = true
+		break
+	}
+	if flag {
+		return errmsg.ERROR_USERPHONE_USED
+	} else {
+		return errmsg.SUCCESS
+	}
+}
 
 // GetPwd 获取加密的密码
 func GetPwd(pwd string) string {

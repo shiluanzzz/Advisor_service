@@ -26,8 +26,8 @@ func NewUserController(ctx *gin.Context) {
 	// 用户密码加密存储
 	data.Password = service.GetPwd(data.Password)
 
-	// 调用service层
-	code = service.CheckUserPhone(data.Phone)
+	// 调用service层 检查手机号是否重复
+	code = service.CheckPhoneExist(service.USERTABLE, data.Phone)
 	if code == errmsg.SUCCESS {
 		code = service.NewUser(&data)
 	}

@@ -6,7 +6,7 @@ const (
 	SUCCESS = 200
 	ERROR   = 400
 	// 用户错误状态码
-	ERROR_USERNAME_USED   = 1001
+	ERROR_USERPHONE_USED  = 1001
 	ERROR_PASSWORD_WORON  = 1002
 	ERROR_USER_NOT_EXIST  = 1003
 	ERROR_USERNAME_MODIFY = 1004
@@ -24,7 +24,7 @@ var errMsg = map[int]string{
 	SUCCESS: "成功",
 	ERROR:   "错误",
 	// user
-	ERROR_USERNAME_USED:   "用户名已存在！",
+	ERROR_USERPHONE_USED:  "手机号已注册！",
 	ERROR_PASSWORD_WORON:  "密码错误",
 	ERROR_USER_NOT_EXIST:  "用户不存在",
 	ERROR_USERNAME_MODIFY: "不允许修改用户名!",
