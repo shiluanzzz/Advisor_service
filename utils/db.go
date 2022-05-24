@@ -1,26 +1,26 @@
-package model
+package utils
 
 import (
 	"database/sql"
 	"github.com/didi/gendry/manager"
+	_ "github.com/go-sql-driver/mysql"
 	"log"
-	"service/utils"
 	"time"
 )
 
 var (
-	db *sql.DB
+	DbConn *sql.DB
 )
 
-func initDB() {
+func InitDB() {
 	var err error
-	db, err = manager.New(
-		utils.DbName, utils.DbUser, utils.DbPassword, utils.DbHost).Set(
+	DbConn, err = manager.New(
+		DbName, DbUser, DbPassword, DbHost).Set(
 		manager.SetCharset("utf8"),
 		manager.SetTimeout(1*time.Second),
 		manager.SetReadTimeout(1*time.Second),
-	).Port(utils.DbPort).Open(true)
+	).Port(DbPort).Open(true)
 	if err != nil {
-		log.Fatalln("database connect error!")
+		log.Fatalln("database connect error!", err)
 	}
 }
