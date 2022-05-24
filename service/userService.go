@@ -31,8 +31,6 @@ func NewUser(user *model.User) int {
 	return errmsg.SUCCESS
 }
 
-// 数据校验
-
 // CheckUserName 检查用户名是否重复 true=已经存在 false=不存在
 func CheckUserName(name string) int {
 	// 生产sql语句
@@ -63,8 +61,6 @@ func CheckUserName(name string) int {
 		return errmsg.SUCCESS
 	}
 }
-
-// 更新数据
 
 // UpdateUser 更新用户的信息
 func UpdateUser(user *model.User) int {
@@ -122,7 +118,7 @@ func ChangeUserPWD(username, newPwd string) int {
 	return errmsg.SUCCESS
 }
 
-// GetUser 获取用户的全部信息 也可以当作Login用
+// GetUser 获取用户的全部信息
 func GetUser(username string) (int, model.User) {
 	where := map[string]interface{}{
 		"name": username,

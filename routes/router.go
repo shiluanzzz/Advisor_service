@@ -13,11 +13,11 @@ func InitRouter() {
 	UserRouter := r.Group("user")
 	{
 		UserRouter.POST("/add", v1.NewUserController)
-		UserRouter.POST("/update", v1.UpdateUserInfoController)
+		UserRouter.GET("/login", v1.UserLogin)
 		UserRouter.POST("/changepwd", v1.UpdateUserPwd)
+		UserRouter.Use(middleware.JwtToken()).POST("/update", v1.UpdateUserInfoController)
+		UserRouter.Use(middleware.JwtToken()).POST("/get", v1.GetUserInfo)
 	}
-	r.GET("user/login", v1.UserLogin)
-	r.Use(middleware.JwtToken()).POST("user/get", v1.GetUserInfo)
 	err := r.Run(utils.HttpPort)
 	if err != nil {
 		log.Fatalln("gin框架启动失败", err)

@@ -23,20 +23,22 @@ func NewUserController(ctx *gin.Context) {
 		code = service.NewUser(&data)
 	}
 	ctx.JSON(http.StatusOK, gin.H{
+		"code": code,
 		"msg":  errmsg.GetErrMsg(code),
 		"data": data,
 	})
 }
 func UpdateUserInfoController(ctx *gin.Context) {
 	var data model.User
+	var code int
 	_ = ctx.ShouldBindJSON(&data)
-	// 校验用户密码
-	code := service.CheckRolePwd(service.USERTABLE, data.Name, data.Password)
-	// 用户密码验证通过 执行下一步
-	if code == errmsg.SUCCESS {
+	if data.Name != ctx.GetString("username") {
+		code = errmsg.ERROR_USERNAME_MODIFY
+	} else {
 		code = service.UpdateUser(&data)
 	}
 	ctx.JSON(http.StatusOK, gin.H{
+		"code": code,
 		"msg":  errmsg.GetErrMsg(code),
 		"data": data,
 	})
@@ -54,7 +56,8 @@ func UpdateUserPwd(ctx *gin.Context) {
 		code = service.ChangeUserPWD(username, newPwd)
 	}
 	ctx.JSON(http.StatusOK, gin.H{
-		"msg": errmsg.GetErrMsg(code),
+		"code": code,
+		"msg":  errmsg.GetErrMsg(code),
 	})
 }
 func UserLogin(ctx *gin.Context) {
@@ -67,6 +70,7 @@ func UserLogin(ctx *gin.Context) {
 		token, code = middleware.NewToken(username)
 	}
 	ctx.JSON(http.StatusOK, gin.H{
+		"code":  code,
 		"msg":   errmsg.GetErrMsg(code),
 		"token": token,
 	})
@@ -77,6 +81,7 @@ func GetUserInfo(ctx *gin.Context) {
 	username := ctx.GetString("username")
 	code, data := service.GetUser(username)
 	ctx.JSON(http.StatusOK, gin.H{
+		"code": code,
 		"msg":  errmsg.GetErrMsg(code),
 		"data": data,
 	})
