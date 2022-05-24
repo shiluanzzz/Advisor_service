@@ -12,6 +12,7 @@ func InitRouter() {
 	UserRouter := r.Group("user")
 	{
 		UserRouter.POST("/add", v1.NewUserController)
+		UserRouter.POST("/update", v1.UpdateUserInfoController)
 	}
 
 	err := r.Run(utils.HttpPort)

@@ -33,11 +33,6 @@ func NewUser(user *model.User) int {
 
 // 数据校验
 
-// CheckUserPWD 检查用户名密码是否匹配
-func CheckUserPWD() {
-
-}
-
 // CheckUserName 检查用户名是否重复 true=已经存在 false=不存在
 func CheckUserName(name string) int {
 	// 生产sql语句
@@ -72,8 +67,34 @@ func CheckUserName(name string) int {
 // 更新数据
 
 // UpdateUser 更新用户的信息
-func UpdateUser() {
+func UpdateUser(user *model.User) int {
 
+	where := map[string]interface{}{
+		"name": user.Name,
+	}
+	// 把新的用户角色直接转化为map,去掉其中的value为空的key 和 username,password.
+	// username,password,coin不可直接更新
+	updates := structs.Map(user)
+	delete(updates, "name")
+	delete(updates, "password")
+	delete(updates, "coin")
+	for k, v := range updates {
+		if v == "" {
+			delete(updates, k)
+		}
+	}
+	// 构造sql 执行更新
+	cond, vals, err := qb.BuildUpdate(USERTABLE, where, updates)
+	if err != nil {
+		log.Println("gendry SQL生成错误", err)
+		return errmsg.ERROR_SQL_BUILD
+	}
+	_, err = utils.DbConn.Exec(cond, vals...)
+	if err != nil {
+		log.Println("数据库更新数据出错", err)
+		return errmsg.ERROR_MYSQL
+	}
+	return errmsg.SUCCESS
 }
 
 // ChangeUserPWD 更改用户密码
