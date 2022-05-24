@@ -32,12 +32,12 @@ func NewUser(user *model.User) int {
 }
 
 // CheckUserName 检查用户名是否重复 true=已经存在 false=不存在
-func CheckUserName(name string) int {
+func CheckUserPhone(phone string) int {
 	// 生产sql语句
 	where := map[string]interface{}{
-		"name": name,
+		"phone": phone,
 	}
-	selectFields := []string{"name"}
+	selectFields := []string{"phone"}
 	cond, values, err := qb.BuildSelect(USERTABLE, where, selectFields)
 	if err != nil {
 		log.Println("gendry SQL生成错误", err)
@@ -69,9 +69,9 @@ func UpdateUser(user *model.User) int {
 		"name": user.Name,
 	}
 	// 把新的用户角色直接转化为map,去掉其中的value为空的key 和 username,password.
-	// username,password,coin不可直接更新
+	// phone,password,coin不可直接更新
 	updates := structs.Map(user)
-	delete(updates, "name")
+	delete(updates, "phone")
 	delete(updates, "password")
 	delete(updates, "coin")
 	for k, v := range updates {

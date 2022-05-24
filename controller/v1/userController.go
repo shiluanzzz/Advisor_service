@@ -27,7 +27,7 @@ func NewUserController(ctx *gin.Context) {
 	data.Password = service.GetPwd(data.Password)
 
 	// 调用service层
-	code = service.CheckUserName(data.Name)
+	code = service.CheckUserPhone(data.Phone)
 	if code == errmsg.SUCCESS {
 		code = service.NewUser(&data)
 	}
