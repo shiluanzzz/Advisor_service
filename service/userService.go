@@ -37,42 +37,13 @@ func UpdateUser(user *model.User) int {
 	where := map[string]interface{}{
 		"phone": user.Phone,
 	}
-	// 把新的用户角色直接转化为map,去掉其中的value为空的key 和 username,password.
+	// 把新的用户角色直接转化为map,去掉不能直接更新的字段
 	// phone,password,coin不可直接更新
 	updates := structs.Map(user)
 	delete(updates, "phone")
 	delete(updates, "password")
 	delete(updates, "coin")
-	for k, v := range updates {
-		if v == "" {
-			delete(updates, k)
-		}
-	}
-	// 构造sql 执行更新
-	cond, vals, err := qb.BuildUpdate(USERTABLE, where, updates)
-	if err != nil {
-		log.Println("gendry SQL生成错误", err)
-		return errmsg.ERROR_SQL_BUILD
-	}
-	_, err = utils.DbConn.Exec(cond, vals...)
-	if err != nil {
-		log.Println("数据库更新数据出错", err)
-		return errmsg.ERROR_MYSQL
-	}
-	return errmsg.SUCCESS
-}
 
-// ChangeUserPWD 更改用户密码
-func ChangeUserPWD(username, newPwd string) int {
-	// 密码加密
-	newPwd = GetPwd(newPwd)
-	// 构造sql
-	where := map[string]interface{}{
-		"name": username,
-	}
-	updates := map[string]interface{}{
-		"password": newPwd,
-	}
 	// 构造sql 执行更新
 	cond, vals, err := qb.BuildUpdate(USERTABLE, where, updates)
 	if err != nil {
@@ -90,7 +61,7 @@ func ChangeUserPWD(username, newPwd string) int {
 // GetUser 获取用户的全部信息
 func GetUser(phone string) (int, model.User) {
 	where := map[string]interface{}{
-		"name": phone,
+		"phone": phone,
 	}
 	selects := []string{"name", "phone", "birth", "gender", "bio", "about", "coin"}
 	cond, values, err := qb.BuildSelect(USERTABLE, where, selects)

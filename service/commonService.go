@@ -41,6 +41,31 @@ func CheckPhoneExist(tableName, phone string) int {
 	}
 }
 
+// ChangePWD 更改用户密码
+func ChangePWD(tableName, phone, newPwd string) int {
+	// 密码加密
+	newPwd = GetPwd(newPwd)
+	// 构造sql
+	where := map[string]interface{}{
+		"phone": phone,
+	}
+	updates := map[string]interface{}{
+		"password": newPwd,
+	}
+	// 构造sql 执行更新
+	cond, vals, err := qb.BuildUpdate(tableName, where, updates)
+	if err != nil {
+		log.Println("gendry SQL生成错误", err)
+		return errmsg.ERROR_SQL_BUILD
+	}
+	_, err = utils.DbConn.Exec(cond, vals...)
+	if err != nil {
+		log.Println("数据库更新数据出错", err)
+		return errmsg.ERROR_MYSQL
+	}
+	return errmsg.SUCCESS
+}
+
 // GetPwd 获取加密的密码
 func GetPwd(pwd string) string {
 	hashPwd, err := bcrypt.GenerateFromPassword([]byte(pwd), 10)
@@ -62,12 +87,12 @@ func checkPwd(pwd string, encryptPwd string) int {
 }
 
 // CheckRolePwd 检查不同的角色对应的用户密码是否对应
-// table:不同角色对应的表名 username:用户名 pwd:密码
-func CheckRolePwd(table, username string, pwd string) int {
+// table:不同角色对应的表名 phone:手机号 pwd:密码
+func CheckRolePwd(table, phone string, pwd string) int {
 	var encryptPwd string
 	// 从数据库中查加密后的密码
 	where := map[string]interface{}{
-		"name": username,
+		"phone": phone,
 	}
 	selectFiled := []string{"password"}
 	cond, value, err := qb.BuildSelect(table, where, selectFiled)
