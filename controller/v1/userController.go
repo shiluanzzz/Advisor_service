@@ -7,21 +7,31 @@ import (
 	"service/model"
 	"service/service"
 	"service/utils/errmsg"
+	"service/utils/validator"
 )
 
 func NewUserController(ctx *gin.Context) {
 	var data model.User
 	_ = ctx.ShouldBindJSON(&data)
-	// 数据校验 govalidator TODO
-
+	// 数据校验
+	msg, code := validator.Validate(data)
+	if code != errmsg.SUCCESS {
+		ctx.JSON(http.StatusOK, gin.H{
+			"code": code,
+			"msg":  msg,
+			"data": data,
+		})
+		return
+	}
 	// 用户密码加密存储
 	data.Password = service.GetPwd(data.Password)
 
 	// 调用service层
-	code := service.CheckUserName(data.Name)
+	code = service.CheckUserName(data.Name)
 	if code == errmsg.SUCCESS {
 		code = service.NewUser(&data)
 	}
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": code,
 		"msg":  errmsg.GetErrMsg(code),
