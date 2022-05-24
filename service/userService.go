@@ -35,7 +35,7 @@ func NewUser(user *model.User) int {
 func UpdateUser(user *model.User) int {
 
 	where := map[string]interface{}{
-		"name": user.Name,
+		"phone": user.Phone,
 	}
 	// 把新的用户角色直接转化为map,去掉其中的value为空的key 和 username,password.
 	// phone,password,coin不可直接更新
@@ -88,9 +88,9 @@ func ChangeUserPWD(username, newPwd string) int {
 }
 
 // GetUser 获取用户的全部信息
-func GetUser(username string) (int, model.User) {
+func GetUser(phone string) (int, model.User) {
 	where := map[string]interface{}{
-		"name": username,
+		"name": phone,
 	}
 	selects := []string{"name", "phone", "birth", "gender", "bio", "about", "coin"}
 	cond, values, err := qb.BuildSelect(USERTABLE, where, selects)

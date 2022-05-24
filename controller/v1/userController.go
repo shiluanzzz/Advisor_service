@@ -84,8 +84,8 @@ func UserLogin(ctx *gin.Context) {
 
 func GetUserInfo(ctx *gin.Context) {
 	//这个username 是token鉴权成功后写入到请求中的
-	username := ctx.GetString("username")
-	code, data := service.GetUser(username)
+	phone := ctx.GetString("phone")
+	code, data := service.GetUser(phone)
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": code,
 		"msg":  errmsg.GetErrMsg(code),
