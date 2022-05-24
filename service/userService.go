@@ -31,7 +31,7 @@ func NewUser(user *model.User) int {
 	return errmsg.SUCCESS
 }
 
-// CheckUserName 检查用户名是否重复 true=已经存在 false=不存在
+// CheckUserPhone 检查手机号是否重复 true=已经存在 false=不存在
 func CheckUserPhone(phone string) int {
 	// 生产sql语句
 	where := map[string]interface{}{
