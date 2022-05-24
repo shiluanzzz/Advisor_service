@@ -1,12 +1,12 @@
 package model
 
 type User struct {
-	Name     string `json:"name"`
-	Password string `json:"password"`
-	Phone    string `json:"phone"`
-	Birth    string `json:"birth"`
-	Gender   string `json:"gender"`
-	Bio      string `json:"bio"`
-	About    string `json:"about"`
-	Coin     int    `json:"coin"`
+	Name     string `structs:"name" json:"name"`
+	Password string `structs:"password" json:"password"`
+	Phone    string `structs:"phone" json:"phone"`
+	Birth    string `structs:"birth" json:"birth"`
+	Gender   string `structs:"gender" json:"gender"`
+	Bio      string `structs:"bio" json:"bio"`
+	About    string `structs:"about" json:"about"`
+	Coin     int    `structs:"coin" json:"coin"`
 }
