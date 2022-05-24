@@ -42,11 +42,7 @@ func UpdateUserInfoController(ctx *gin.Context) {
 	var data model.User
 	var code int
 	_ = ctx.ShouldBindJSON(&data)
-	if data.Name != ctx.GetString("username") {
-		code = errmsg.ERROR_USERNAME_MODIFY
-	} else {
-		code = service.UpdateUser(&data)
-	}
+	code = service.UpdateUser(&data)
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": code,
 		"msg":  errmsg.GetErrMsg(code),
