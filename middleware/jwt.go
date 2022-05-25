@@ -17,17 +17,17 @@ var (
 
 // MyClaims 自定义一个cliams
 type MyClaims struct {
-	Username string
+	Phone string
 	jwt.StandardClaims
 }
 
 // NewToken 生成token
-func NewToken(Username string) (string, int) {
+func NewToken(Phone string) (string, int) {
 	// 有效期
 	expireTime := time.Now().Add(10 * time.Hour)
 	// 声明一个Claims
 	SetClaims := MyClaims{
-		Username,
+		Phone,
 		jwt.StandardClaims{ExpiresAt: expireTime.Unix(), Issuer: "service"},
 	}
 	// 新建一个声明
@@ -104,7 +104,7 @@ func JwtToken() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("username", key.Username)
+		c.Set("phone", key.Phone)
 		c.Next()
 	}
 }

@@ -10,6 +10,8 @@ const (
 	ERROR_PASSWORD_WORON  = 1002
 	ERROR_USER_NOT_EXIST  = 1003
 	ERROR_USERNAME_MODIFY = 1004
+	// 输入错误
+	ERROR_INPUT = 1005
 	// 服务器内部错误,SQL编译等
 	ERROR_SQL_BUILD = 2001
 	ERROR_MYSQL     = 2002
@@ -28,6 +30,8 @@ var errMsg = map[int]string{
 	ERROR_PASSWORD_WORON:  "密码错误",
 	ERROR_USER_NOT_EXIST:  "用户不存在",
 	ERROR_USERNAME_MODIFY: "不允许修改用户名!",
+	ERROR_INPUT:           "输入不符合要求!",
+
 	//服务器内部错误
 	ERROR_SQL_BUILD: "服务器内部错误",
 	ERROR_MYSQL:     "数据库操作错误",
