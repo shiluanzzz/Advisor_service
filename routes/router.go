@@ -17,19 +17,22 @@ func InitRouter() {
 	{
 		UserRouter.POST("/add", v1.NewUserController)
 		UserRouter.GET("/login", v1.UserLogin)
-		UserRouter.Use(middleware.JwtToken()).POST("/pwd", v1.UpdateUserPwd)
-		UserRouter.Use(middleware.JwtToken()).POST("/update", v1.UpdateUserInfoController)
-		UserRouter.Use(middleware.JwtToken()).POST("/get", v1.GetUserInfo)
+		UserRouter.Use(middleware.JwtToken())
+		UserRouter.POST("/pwd", v1.UpdateUserPwd)
+		UserRouter.POST("/update", v1.UpdateUserInfoController)
+		UserRouter.POST("/get", v1.GetUserInfo)
 	}
 	AdvisorRouter := r.Group("advisor")
 	{
 		AdvisorRouter.POST("/add", v1.NewAdvisorController)
 		AdvisorRouter.GET("/login", v1.AdvisorLogin)
-		AdvisorRouter.Use(middleware.JwtToken()).POST("/update", v1.UpdateAdvisorController)
-		AdvisorRouter.Use(middleware.JwtToken()).POST("/pwd", v1.UpdateAdvisorPwd)
-		AdvisorRouter.Use(middleware.JwtToken()).GET("/getInfo", v1.GetAdvisorInfo)
+		AdvisorRouter.GET("/getList", v1.GetAdvisorList)
+		AdvisorRouter.Use(middleware.JwtToken())
+		AdvisorRouter.POST("/update", v1.UpdateAdvisorController)
+		AdvisorRouter.POST("/pwd", v1.UpdateAdvisorPwd)
+		AdvisorRouter.GET("/getInfo", v1.GetAdvisorInfo)
+		AdvisorRouter.POST("/status", v1.ModifyAdvisorStatus)
 		// TODO
-		AdvisorRouter.POST("/getList", v1.GetAdvisorList)
 
 	}
 	logger.Log.Info("服务启动")

@@ -6,7 +6,7 @@ type Advisor struct {
 	Phone          string  `structs:"phone" json:"phone" validate:"required,number,len=11"`
 	Coin           int     `structs:"coin" json:"coin" validate:"number"`
 	TotalOrderNum  int     `structs:"total_order_num" json:"total_order_num" validate:"number"`
-	Status         string  `structs:"status" json:"status" validate:"required,oneof=open close"`
+	Status         int     `structs:"status" json:"status" validate:"required,min=0,max=1"`
 	Rank           float64 `structs:"rank" json:"rank" validate:"number"`
 	RankNum        int     `structs:"rank_num" json:"rank_num" validate:"number"`
 	WorkExperience int     `structs:"work_experience" json:"work_experience" validate:"number,gte=0"`

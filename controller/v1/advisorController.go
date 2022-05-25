@@ -8,6 +8,7 @@ import (
 	"service/service"
 	"service/utils/errmsg"
 	"service/utils/validator"
+	"strconv"
 )
 
 func NewAdvisorController(ctx *gin.Context) {
@@ -87,7 +88,24 @@ func UpdateAdvisorPwd(ctx *gin.Context) {
 
 // 获取顾问的列表
 func GetAdvisorList(ctx *gin.Context) {
+	pageString := ctx.DefaultQuery("page", "1")
+	page, err := strconv.Atoi(pageString)
+	var code int
+	if err != nil || page < 1 {
+		code = errmsg.ERROR_INPUT
+		ctx.JSON(http.StatusOK, gin.H{
+			"code": code,
+			"msg":  errmsg.GetErrMsg(code),
+		})
+		return
+	}
+	code, data := service.GetAdvisorList(page)
 
+	ctx.JSON(http.StatusOK, gin.H{
+		"code": code,
+		"msg":  errmsg.GetErrMsg(code),
+		"data": data,
+	})
 }
 
 // 顾问登录
@@ -119,5 +137,24 @@ func GetAdvisorInfo(ctx *gin.Context) {
 		"code": code,
 		"msg":  errmsg.GetErrMsg(code),
 		"data": data,
+	})
+}
+
+// 顾问修改自己的服务状态
+func ModifyAdvisorStatus(ctx *gin.Context) {
+	phone := ctx.GetString("phone")
+	newStatus := ctx.PostForm("status")
+	if newStatus != "0" && newStatus != "1" {
+		ctx.JSON(http.StatusOK, gin.H{
+			"msg":  "服务状态为0或者1",
+			"code": errmsg.ERROR,
+		})
+		return
+	}
+	newStatusInt, _ := strconv.Atoi(newStatus)
+	code := service.ModifyAdvisorStatus(phone, newStatusInt)
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg":  errmsg.GetErrMsg(code),
+		"code": code,
 	})
 }
