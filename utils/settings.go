@@ -14,6 +14,11 @@ var (
 	HttpPort string
 	AppMode  string
 	JwtKey   string
+
+	LoggerMode string
+	InfoLog    string
+	ErrorLog   string
+	WarnLog    string
 )
 
 func init() {
@@ -23,7 +28,10 @@ func init() {
 	}
 	LoadDBConfig(file)
 	LoadServer(file)
+	LoadLogger(file)
 }
+
+// 读取数据库相关配置文件
 func LoadDBConfig(file *ini.File) {
 	var err error
 	Db = file.Section("database").Key("Db").String()
@@ -37,8 +45,17 @@ func LoadDBConfig(file *ini.File) {
 	}
 }
 
+// 读取服务器相关配置文件
 func LoadServer(file *ini.File) {
 	AppMode = file.Section("server").Key("AppMode").MustString("debug")
 	HttpPort = file.Section("server").Key("HttpPort").MustString(":8000")
 	JwtKey = file.Section("server").Key("JwyKey").MustString("fdasasferqw")
+}
+
+// 读取日志相关配置文件
+func LoadLogger(file *ini.File) {
+	LoggerMode = file.Section("logger").Key("LoggerMode").MustString("development")
+	InfoLog = file.Section("loggeer").Key("InfoLog").MustString("./info.log")
+	ErrorLog = file.Section("loggeer").Key("ErrorLog").MustString("./error.log")
+	WarnLog = file.Section("loggeer").Key("WarnLog").MustString("./warn.log")
 }

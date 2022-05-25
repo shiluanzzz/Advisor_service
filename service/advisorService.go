@@ -3,10 +3,10 @@ package service
 import (
 	qb "github.com/didi/gendry/builder"
 	"github.com/fatih/structs"
-	"log"
 	"service/model"
 	"service/utils"
 	"service/utils/errmsg"
+	"service/utils/logger"
 )
 
 var ADVISORTABLE = "advisor"
@@ -18,14 +18,14 @@ func NewAdvisor(model *model.Advisor) int {
 	data = append(data, structs.Map(model))
 	cond, vals, err := qb.BuildInsert(ADVISORTABLE, data)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 
 	// 执行sql语句
 	_, err = utils.DbConn.Exec(cond, vals...)
 	if err != nil {
-		log.Println("数据新增错误", err)
+		logger.SqlInsertError(err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	return errmsg.SUCCESS
@@ -47,12 +47,12 @@ func UpdateAdvisor(model *model.Advisor) int {
 	delete(updates, "rank_num")
 	cond, vals, err := qb.BuildUpdate(ADVISORTABLE, where, updates)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	_, err = utils.DbConn.Exec(cond, vals...)
 	if err != nil {
-		log.Println("数据库更新数据出错", err)
+		logger.SqlUpdateError(err)
 		return errmsg.ERROR_MYSQL
 	}
 	return errmsg.SUCCESS
@@ -68,7 +68,7 @@ func GetAdvisorInfo(phone string) (int, model.Advisor) {
 	}
 	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD, model.Advisor{}
 	}
 	row := utils.DbConn.QueryRow(cond, values...)
@@ -79,7 +79,7 @@ func GetAdvisorInfo(phone string) (int, model.Advisor) {
 		&res.Rank, &res.RankNum, &res.WorkExperience, &res.Bio, &res.About,
 	)
 	if err != nil {
-		log.Println("数据库查询用户信息出错", err)
+		logger.SqlSelectError(err)
 		return errmsg.ERROR_MYSQL, model.Advisor{}
 	}
 	return errmsg.SUCCESS, res

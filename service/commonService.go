@@ -4,10 +4,11 @@ package service
 import (
 	"database/sql"
 	qb "github.com/didi/gendry/builder"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 	"service/utils"
 	"service/utils/errmsg"
+	"service/utils/logger"
 )
 
 // CheckPhoneExist 检查手机号是否重复 true=已经存在 false=不存在
@@ -19,13 +20,13 @@ func CheckPhoneExist(tableName, phone string) int {
 	selectFields := []string{"phone"}
 	cond, values, err := qb.BuildSelect(tableName, where, selectFields)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	// 查询
 	rows, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
-		log.Println("数据库查询错误", err)
+		logger.SqlSelectError(err)
 		return errmsg.ERROR_MYSQL
 	}
 	// 判断是否存在重复key
@@ -55,12 +56,12 @@ func ChangePWD(tableName, phone, newPwd string) int {
 	// 构造sql 执行更新
 	cond, vals, err := qb.BuildUpdate(tableName, where, updates)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	_, err = utils.DbConn.Exec(cond, vals...)
 	if err != nil {
-		log.Println("数据库更新数据出错", err)
+		logger.SqlUpdateError(err)
 		return errmsg.ERROR_MYSQL
 	}
 	return errmsg.SUCCESS
@@ -70,7 +71,7 @@ func ChangePWD(tableName, phone, newPwd string) int {
 func GetPwd(pwd string) string {
 	hashPwd, err := bcrypt.GenerateFromPassword([]byte(pwd), 10)
 	if err != nil {
-		log.Println("generate password error,", err)
+		logger.Log.Error("生成密码错误", zap.Error(err))
 		return pwd
 	}
 	return string(hashPwd)
@@ -97,7 +98,7 @@ func CheckRolePwd(table, phone string, pwd string) int {
 	selectFiled := []string{"password"}
 	cond, value, err := qb.BuildSelect(table, where, selectFiled)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	rows := utils.DbConn.QueryRow(cond, value...)
@@ -106,7 +107,7 @@ func CheckRolePwd(table, phone string, pwd string) int {
 		if err == sql.ErrNoRows {
 			return errmsg.ERROR_USER_NOT_EXIST
 		} else {
-			log.Println("数据查询用户密码错误", err)
+			logger.SqlSelectError(err)
 			return errmsg.ERROR_PASSWORD_WORON
 		}
 	}

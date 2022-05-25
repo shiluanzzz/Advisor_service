@@ -5,11 +5,14 @@ import (
 	"log"
 	"service/middleware"
 	"service/utils"
+	"service/utils/logger"
 )
 import v1 "service/controller/v1"
 
 func InitRouter() {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(middleware.Log())
 	UserRouter := r.Group("user")
 	{
 		UserRouter.POST("/add", v1.NewUserController)
@@ -29,6 +32,7 @@ func InitRouter() {
 		AdvisorRouter.POST("/getList", v1.GetAdvisorList)
 
 	}
+	logger.Log.Info("服务启动")
 	err := r.Run(utils.HttpPort)
 	if err != nil {
 		log.Fatalln("gin框架启动失败", err)

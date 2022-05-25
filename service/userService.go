@@ -3,10 +3,11 @@ package service
 import (
 	qb "github.com/didi/gendry/builder"
 	"github.com/fatih/structs"
-	"log"
+	"go.uber.org/zap"
 	"service/model"
 	"service/utils"
 	"service/utils/errmsg"
+	"service/utils/logger"
 )
 
 var USERTABLE = "user"
@@ -18,14 +19,14 @@ func NewUser(user *model.User) int {
 	data = append(data, structs.Map(user))
 	cond, vals, err := qb.BuildInsert(USERTABLE, data)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.Log.Error("SQL编译错误", zap.Error(err))
 		return errmsg.ERROR_SQL_BUILD
 	}
 
 	// 执行sql语句
 	_, err = utils.DbConn.Exec(cond, vals...)
 	if err != nil {
-		log.Println("数据新增错误", err)
+		logger.Log.Error("数据库插入错误", zap.Error(err))
 		return errmsg.ERROR_SQL_BUILD
 	}
 	return errmsg.SUCCESS
@@ -47,12 +48,12 @@ func UpdateUser(user *model.User) int {
 	// 构造sql 执行更新
 	cond, vals, err := qb.BuildUpdate(USERTABLE, where, updates)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	_, err = utils.DbConn.Exec(cond, vals...)
 	if err != nil {
-		log.Println("数据库更新数据出错", err)
+		logger.SqlUpdateError(err)
 		return errmsg.ERROR_MYSQL
 	}
 	return errmsg.SUCCESS
@@ -66,7 +67,7 @@ func GetUser(phone string) (int, model.User) {
 	selects := []string{"name", "phone", "birth", "gender", "bio", "about", "coin"}
 	cond, values, err := qb.BuildSelect(USERTABLE, where, selects)
 	if err != nil {
-		log.Println("gendry SQL生成错误", err)
+		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD, model.User{}
 	}
 	row := utils.DbConn.QueryRow(cond, values...)
@@ -74,7 +75,7 @@ func GetUser(phone string) (int, model.User) {
 	// 能不能直接自动赋值到结构体对应的字段?
 	err = row.Scan(&res.Name, &res.Phone, &res.Birth, &res.Gender, &res.Bio, &res.About, &res.Coin)
 	if err != nil {
-		log.Println("数据库查询用户信息出错", err)
+		logger.SqlSelectError(err)
 		return errmsg.ERROR_MYSQL, model.User{}
 	}
 	return errmsg.SUCCESS, res

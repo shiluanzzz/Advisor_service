@@ -3,10 +3,11 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
-	"log"
+	"go.uber.org/zap"
 	"net/http"
 	"service/utils"
 	"service/utils/errmsg"
+	"service/utils/logger"
 	"strings"
 	"time"
 )
@@ -35,7 +36,7 @@ func NewToken(Phone string) (string, int) {
 	// 生成Token
 	token, err := reqClaims.SignedString(jwtKey)
 	if err != nil {
-		log.Println("TOKEN生成错误！", err)
+		logger.Log.Error("Token生成错误", zap.Error(err))
 		return "", errmsg.ERROR
 	}
 	return token, errmsg.SUCCESS
