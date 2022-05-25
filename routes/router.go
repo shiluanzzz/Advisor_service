@@ -32,8 +32,13 @@ func InitRouter() {
 		AdvisorRouter.POST("/pwd", v1.UpdateAdvisorPwd)
 		AdvisorRouter.GET("/getInfo", v1.GetAdvisorInfo)
 		AdvisorRouter.POST("/status", v1.ModifyAdvisorStatus)
-		// TODO
-
+	}
+	Service := r.Group("service")
+	Service.Use(middleware.JwtToken())
+	{
+		Service.POST("/add", v1.NewService)
+		Service.POST("/status", v1.ModifyServiceStatus)
+		Service.POST("/price", v1.ModifyServicePrice)
 	}
 	logger.Log.Info("服务启动")
 	err := r.Run(utils.HttpPort)
