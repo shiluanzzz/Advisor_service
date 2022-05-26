@@ -86,7 +86,7 @@ func UpdateAdvisorPwd(ctx *gin.Context) {
 	})
 }
 
-// 获取顾问的列表
+// GetAdvisorList 获取顾问的列表
 func GetAdvisorList(ctx *gin.Context) {
 	pageString := ctx.DefaultQuery("page", "1")
 	page, err := strconv.Atoi(pageString)
@@ -108,7 +108,7 @@ func GetAdvisorList(ctx *gin.Context) {
 	})
 }
 
-// 顾问登录
+// AdvisorLogin 顾问登录
 func AdvisorLogin(ctx *gin.Context) {
 	phone := ctx.Query("phone")
 	pwd := ctx.Query("password")
@@ -129,7 +129,7 @@ func AdvisorLogin(ctx *gin.Context) {
 	})
 }
 
-// 获取顾问的详细信息
+// GetAdvisorInfo 获取顾问的详细信息
 func GetAdvisorInfo(ctx *gin.Context) {
 	phone := ctx.Query("phone")
 	code, data := service.GetAdvisorInfo(phone)
@@ -140,7 +140,7 @@ func GetAdvisorInfo(ctx *gin.Context) {
 	})
 }
 
-// 顾问修改自己的服务状态
+// ModifyAdvisorStatus 顾问修改自己的服务状态
 func ModifyAdvisorStatus(ctx *gin.Context) {
 	phone := ctx.GetString("phone")
 	newStatus := ctx.PostForm("status")
