@@ -15,6 +15,7 @@ func NewService(ctx *gin.Context) {
 	_ = ctx.ShouldBindJSON(&data)
 	// token 鉴权的接口直接从token拿数据
 	data.AdvisorPhone = ctx.GetString("phone")
+	// 获取这个服务对应的ID
 	data.ServiceId = service.GetServiceId(data.ServiceName)
 	msg, code := validator.Validate(data)
 	if code != errmsg.SUCCESS {
@@ -25,9 +26,10 @@ func NewService(ctx *gin.Context) {
 		})
 		return
 	}
-	//TODO 检查是否有重复的服务
-	//code = service.CheckService(&data)
-	if code == errmsg.SUCCESS {
+	//检查是否有重复的服务
+	code = service.CheckService(data.ServiceId, data.AdvisorPhone)
+	if code == errmsg.ERROR_SERVICE_NOT_EXIST {
+		//不存在的话在去创建服务
 		code = service.NewService(&data)
 	}
 	ctx.JSON(http.StatusOK, gin.H{
@@ -57,7 +59,16 @@ func ModifyServiceStatus(ctx *gin.Context) {
 		})
 		return
 	}
-	// TODO 检查顾客是否有这个服务
+	// 检查顾客是否有这个服务
+	code = service.CheckService(data.ID, data.Phone)
+	if code == errmsg.ERROR_SERVICE_NOT_EXIST {
+		ctx.JSON(http.StatusOK, gin.H{
+			"code": code,
+			"msg":  errmsg.GetErrMsg(code),
+			"data": data,
+		})
+		return
+	}
 	code = service.ModifyServiceStatus(data.Phone, data.ID, data.Status)
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": code,
@@ -82,6 +93,16 @@ func ModifyServicePrice(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
 			"code": code,
 			"msg":  msg,
+			"data": data,
+		})
+		return
+	}
+	// 检查顾客是否有这个服务
+	code = service.CheckService(data.ID, data.Phone)
+	if code == errmsg.ERROR_SERVICE_NOT_EXIST {
+		ctx.JSON(http.StatusOK, gin.H{
+			"code": code,
+			"msg":  errmsg.GetErrMsg(code),
 			"data": data,
 		})
 		return

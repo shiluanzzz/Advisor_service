@@ -20,6 +20,9 @@ const (
 	ERROR_TOKEN_TIME_OUT    = 3002
 	ERROR_TOKEN_WOKEN_WRONG = 3003
 	ERROR_TOKEN_TYPE_WRONG  = 3004
+	// service
+	ERROR_SERVICE_NOT_EXIST = 4001
+	ERROR_SERVICE_EXIST     = 4002
 )
 
 var errMsg = map[int]string{
@@ -41,6 +44,9 @@ var errMsg = map[int]string{
 	ERROR_TOKEN_TIME_OUT:    "TOKEN超时",
 	ERROR_TOKEN_WOKEN_WRONG: "TOKEN错误",
 	ERROR_TOKEN_TYPE_WRONG:  "TOKEN格式错误",
+	// service
+	ERROR_SERVICE_NOT_EXIST: "服务不存在",
+	ERROR_SERVICE_EXIST:     "服务已存在",
 }
 
 func GetErrMsg(code int) string {

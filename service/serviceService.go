@@ -14,6 +14,7 @@ import (
 var SERVICEKINDTABLE = "service_kind"
 var SERVICETABLE = "service"
 
+// NewService 新增一个顾客的服务
 func NewService(model *model.Service) int {
 	var data []map[string]interface{}
 	newData := structs.Map(model)
@@ -34,7 +35,7 @@ func NewService(model *model.Service) int {
 	return errmsg.SUCCESS
 }
 
-// 获取service的ID 如果不存在就新建一个ID并返回
+// GetServiceId 获取service的ID 如果不存在就新建一个ID并返回
 func GetServiceId(serviceName string) int {
 	row := utils.DbConn.QueryRow("select id from service_kind where name=?", serviceName)
 	var id int
@@ -48,6 +49,8 @@ func GetServiceId(serviceName string) int {
 	}
 	return id
 }
+
+// 新增一个服务类型
 func newServiceKind(serviceName string) int {
 	res, err := utils.DbConn.Exec("insert into service_kind(name) values (?)", serviceName)
 	if err != nil {
@@ -59,9 +62,30 @@ func newServiceKind(serviceName string) int {
 }
 
 // CheckService 检查顾问是否存在两种相同的服务
-func CheckService(model *model.Service) int {
-	return errmsg.SUCCESS
+func CheckService(ServiceId int, AdvisorPhone string) int {
+	where := map[string]interface{}{
+		"service_id":    ServiceId,
+		"advisor_phone": AdvisorPhone,
+	}
+	selects := []string{"price"}
+	cond, vals, err := qb.BuildSelect(SERVICETABLE, where, selects)
+	if err != nil {
+		logger.GendryError(err)
+		return errmsg.ERROR_SQL_BUILD
+	}
+	var temp float32
+	row := utils.DbConn.QueryRow(cond, vals...)
+	err = row.Scan(&temp)
+	if err == sql.ErrNoRows {
+		return errmsg.ERROR_SERVICE_NOT_EXIST
+	} else if err != nil {
+		logger.SqlSelectError(err)
+		return errmsg.ERROR_MYSQL
+	}
+	return errmsg.ERROR_SERVICE_EXIST
 }
+
+// ModifyServicePrice 修改服务的价格
 func ModifyServicePrice(phone string, id int, price float32) int {
 	where := map[string]interface{}{
 		"service_id":    id,
@@ -82,6 +106,8 @@ func ModifyServicePrice(phone string, id int, price float32) int {
 	}
 	return errmsg.SUCCESS
 }
+
+// ModifyServiceStatus 修改服务状态
 func ModifyServiceStatus(phone string, id int, newStatus int) int {
 	where := map[string]interface{}{
 		"service_id":    id,
