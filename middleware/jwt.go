@@ -45,14 +45,25 @@ func NewToken(Phone string) (string, int) {
 // CheckToken 验证token
 func CheckToken(token string) (*MyClaims, int) {
 	//下面这个函数是官方文档中提供的函数，用来校验token
-	setToken, _ := jwt.ParseWithClaims(token, &MyClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
+	setToken, err := jwt.ParseWithClaims(
+		token,
+		&MyClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		},
+	)
+	if err != nil {
+		if err.(*jwt.ValidationError).Errors == jwt.ValidationErrorExpired {
+			return nil, errmsg.ERROR_TOKEN_TIME_OUT
+		} else {
+			logger.Log.Error("Jwt校验错误", zap.Error(err))
+		}
+	}
 	// 检验
 	if key, _ := setToken.Claims.(*MyClaims); setToken.Valid {
 		return key, errmsg.SUCCESS
 	} else {
-		return nil, errmsg.ERROR
+		return nil, errmsg.ERROR_TOKEN_WOKEN_WRONG
 	}
 }
 
@@ -86,11 +97,10 @@ func JwtToken() gin.HandlerFunc {
 		}
 		// check the validity of the token
 		key, valid := CheckToken(checkToken[1])
-		if valid == errmsg.ERROR {
-			code = errmsg.ERROR_TOKEN_WOKEN_WRONG
+		if valid != errmsg.SUCCESS {
 			c.JSON(http.StatusOK, gin.H{
-				"code": code,
-				"msg":  errmsg.GetErrMsg(code),
+				"code": valid,
+				"msg":  errmsg.GetErrMsg(valid),
 			})
 			c.Abort()
 			return
