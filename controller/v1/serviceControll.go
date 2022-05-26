@@ -18,23 +18,17 @@ func NewService(ctx *gin.Context) {
 	// 获取这个服务对应的ID
 	data.ServiceId = service.GetServiceId(data.ServiceName)
 	msg, code := validator.Validate(data)
-	if code != errmsg.SUCCESS {
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  msg,
-			"data": data,
-		})
-		return
-	}
-	//检查是否有重复的服务
-	code = service.CheckService(data.ServiceId, data.AdvisorPhone)
-	if code == errmsg.ERROR_SERVICE_NOT_EXIST {
-		//不存在的话在去创建服务
-		code = service.NewService(&data)
+	if code == errmsg.SUCCESS {
+		//检查是否有重复的服务
+		code = service.CheckService(data.ServiceId, data.AdvisorPhone)
+		if code == errmsg.ERROR_SERVICE_NOT_EXIST {
+			//不存在的话在去创建服务
+			code = service.NewService(&data)
+		}
 	}
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": code,
-		"msg":  errmsg.GetErrMsg(code),
+		"msg":  errmsg.GetErrMsg(code) + " " + msg,
 		"data": data,
 	})
 }
@@ -51,28 +45,16 @@ func ModifyServiceStatus(ctx *gin.Context) {
 	// 数据校验
 	msg, code := validator.Validate(data)
 	data.Phone = ctx.GetString("phone")
-	if code != errmsg.SUCCESS {
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  msg,
-			"data": data,
-		})
-		return
+	if code == errmsg.SUCCESS {
+		// 检查顾客是否有这个服务
+		code = service.CheckService(data.ID, data.Phone)
+		if code == errmsg.ERROR_SERVICE_EXIST {
+			code = service.ModifyServiceStatus(data.Phone, data.ID, data.Status)
+		}
 	}
-	// 检查顾客是否有这个服务
-	code = service.CheckService(data.ID, data.Phone)
-	if code == errmsg.ERROR_SERVICE_NOT_EXIST {
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  errmsg.GetErrMsg(code),
-			"data": data,
-		})
-		return
-	}
-	code = service.ModifyServiceStatus(data.Phone, data.ID, data.Status)
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": code,
-		"msg":  errmsg.GetErrMsg(code),
+		"msg":  errmsg.GetErrMsg(code) + " " + msg,
 		"data": data,
 	})
 }
@@ -89,28 +71,18 @@ func ModifyServicePrice(ctx *gin.Context) {
 	data.Phone = ctx.GetString("phone")
 	// 数据校验
 	msg, code := validator.Validate(data)
-	if code != errmsg.SUCCESS {
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  msg,
-			"data": data,
-		})
-		return
+	// 数据校验通过
+	if code == errmsg.SUCCESS {
+		// 检查顾客是否有这个服务
+		code = service.CheckService(data.ID, data.Phone)
+		if code == errmsg.ERROR_SERVICE_EXIST {
+			// 修改价格
+			code = service.ModifyServicePrice(data.Phone, data.ID, data.Price)
+		}
 	}
-	// 检查顾客是否有这个服务
-	code = service.CheckService(data.ID, data.Phone)
-	if code == errmsg.ERROR_SERVICE_NOT_EXIST {
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  errmsg.GetErrMsg(code),
-			"data": data,
-		})
-		return
-	}
-	code = service.ModifyServicePrice(data.Phone, data.ID, data.Price)
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": code,
-		"msg":  errmsg.GetErrMsg(code),
+		"msg":  errmsg.GetErrMsg(code) + " " + msg,
 		"data": data,
 	})
 }
