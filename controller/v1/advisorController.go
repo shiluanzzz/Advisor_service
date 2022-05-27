@@ -2,159 +2,129 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"net/http"
-	"service/middleware"
+	"go.uber.org/zap"
+	"reflect"
 	"service/model"
 	"service/service"
 	"service/utils/errmsg"
+	"service/utils/logger"
 	"service/utils/validator"
 	"strconv"
 )
 
 func NewAdvisorController(ctx *gin.Context) {
-	var data model.Advisor
-	_ = ctx.ShouldBindJSON(&data)
-	// 数据校验
-	msg, code := validator.Validate(data)
-	if code != errmsg.SUCCESS {
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  msg,
-			"data": data,
-		})
-		return
-	}
-	// 加密
-	data.Password = service.GetPwd(data.Password)
-	// 检查重复
-	// question: 同一个手机号是否可同时注册为顾问和顾客
-	code = service.CheckPhoneExist(service.ADVISORTABLE, data.Phone)
-	if code == errmsg.SUCCESS {
-		code = service.NewAdvisor(&data)
-	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  errmsg.GetErrMsg(code),
-		"data": data,
-	})
+	NewUserOrAdvisor(service.ADVISORTABLE, ctx)
 }
 func UpdateAdvisorController(ctx *gin.Context) {
-	var data model.Advisor
+
+	var data map[string]interface{}
 	var code int
-	_ = ctx.ShouldBindJSON(&data)
-	// 跳过校验
-	data.Password = "*********"
-	data.Phone = ctx.GetString("phone")
-	msg, code := validator.Validate(data)
-	if code != errmsg.SUCCESS {
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  msg,
-			"data": data,
-		})
+	// 数据绑定
+	err := ctx.ShouldBindJSON(&data)
+	if err != nil {
+		GinBindError(ctx, err, "UpdateAdvisorController", data)
 		return
 	}
-	code = service.UpdateAdvisor(&data)
-	ctx.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  errmsg.GetErrMsg(code),
-		"data": data,
-	})
+	// 数据校验 将不同的字段绑定到不同的校验函数中，使用反射做校验
+	// 不存在的字段在函数中做了检验
+	validateFunc := map[string]interface{}{
+		"name":           validator.Name,
+		"phone":          validator.Phone,
+		"workExperience": validator.WorkExperience,
+		"bio":            validator.Bio,
+		"about":          validator.About,
+	}
+	for key, value := range data {
+		// 判断是否传的都是字符类型 手机号码传数字会被识别为float不好处理
+		if key == "phone" && reflect.TypeOf(value).Kind() != reflect.TypeOf("1").Kind() {
+			commonReturn(ctx, errmsg.ERROR_PHONE_INPUT, "", data)
+			return
+		}
+		msg, code := validator.CallFunc(validateFunc, key, value)
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn("数据校验非法", zap.Error(err))
+			commonReturn(ctx, code, msg, data)
+			return
+		}
+	}
+	data["id"] = ctx.GetInt64("id")
+	// 检查手机号是否重复
+	if data["phone"] != nil {
+		code = service.CheckPhoneExist(service.USERTABLE, data["phone"])
+		if code != errmsg.SUCCESS {
+			commonReturn(ctx, code, "", data)
+			return
+		}
+	}
+	// 更新
+	code = service.Update(service.ADVISORTABLE, data)
+	commonReturn(ctx, code, "", data)
 }
+
 func UpdateAdvisorPwd(ctx *gin.Context) {
-	phone := ctx.GetString("phone")
-	oldPwd := ctx.PostForm("oldPwd")
-	newPwd := ctx.PostForm("newPwd")
-	var code int
-	if oldPwd == newPwd || newPwd == "" {
-		code = errmsg.ERROR_INPUT
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  errmsg.GetErrMsg(code),
-		})
-		return
-	}
-	// 检查新旧密码是否匹配
-	code = service.CheckRolePwd(service.ADVISORTABLE, phone, oldPwd)
-	if code == errmsg.SUCCESS {
-		// update
-		code = service.ChangePWD(service.ADVISORTABLE, phone, newPwd)
-	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  errmsg.GetErrMsg(code),
-	})
+	UpdatePwdControl(service.ADVISORTABLE, ctx)
 }
 
 // GetAdvisorList 获取顾问的列表
 func GetAdvisorList(ctx *gin.Context) {
-	pageString := ctx.DefaultQuery("page", "1")
+	pageString := ctx.Param("page")
 	page, err := strconv.Atoi(pageString)
 	var code int
 	if err != nil || page < 1 {
 		code = errmsg.ERROR_INPUT
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  errmsg.GetErrMsg(code),
-		})
+		commonReturn(ctx, code, "", map[string]int{"page": page})
 		return
 	}
 	code, data := service.GetAdvisorList(page)
-
-	ctx.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  errmsg.GetErrMsg(code),
-		"data": data,
-	})
+	commonReturn(ctx, code, "", data)
 }
 
 // AdvisorLogin 顾问登录
 func AdvisorLogin(ctx *gin.Context) {
-	phone := ctx.Query("phone")
-	pwd := ctx.Query("password")
-	var code int
-	var token string
-	if phone == "" || pwd == "" {
-		code = errmsg.ERROR_INPUT
-	} else {
-		code = service.CheckRolePwd(service.ADVISORTABLE, phone, pwd)
-		if code == errmsg.SUCCESS {
-			token, code = middleware.NewToken(phone)
-		}
-	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"code":  code,
-		"msg":   errmsg.GetErrMsg(code),
-		"token": token,
-	})
+	Login(service.ADVISORTABLE, ctx)
 }
 
 // GetAdvisorInfo 获取顾问的详细信息
 func GetAdvisorInfo(ctx *gin.Context) {
-	phone := ctx.Query("phone")
-	code, data := service.GetAdvisorInfo(phone)
-	ctx.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  errmsg.GetErrMsg(code),
-		"data": data,
-	})
+	type Num struct {
+		Id int64 `form:"id" validate:"required,min=0"`
+	}
+	var data Num
+	err := ctx.ShouldBindQuery(&data)
+	if err != nil {
+		GinBindError(ctx, err, "GetAdvisorInfo", data)
+	}
+	code, res := service.GetAdvisorInfo(data.Id)
+
+	var serviceData interface{}
+	if code == errmsg.SUCCESS {
+		code, serviceData = service.GetAdvisorService(data.Id)
+	}
+	commonReturn(ctx, code, "",
+		map[string]interface{}{
+			"info":    res,
+			"service": serviceData,
+		},
+	)
 }
 
 // ModifyAdvisorStatus 顾问修改自己的服务状态
 func ModifyAdvisorStatus(ctx *gin.Context) {
-	phone := ctx.GetString("phone")
-	newStatus := ctx.PostForm("status")
-	if newStatus != "0" && newStatus != "1" {
-		ctx.JSON(http.StatusOK, gin.H{
-			"msg":  "服务状态为0或者1",
-			"code": errmsg.ERROR,
-		})
+	id := ctx.GetInt64("id")
+	var newStatus model.ServiceState
+	err := ctx.ShouldBind(&newStatus)
+	returnData := map[string]interface{}{
+		"id":     id,
+		"status": newStatus,
+	}
+	if err != nil {
+		GinBindError(ctx, err, "ModifyAdvisorStatus", returnData)
 		return
 	}
-	newStatusInt, _ := strconv.Atoi(newStatus)
-	code := service.ModifyAdvisorStatus(phone, newStatusInt)
-	ctx.JSON(http.StatusOK, gin.H{
-		"msg":  errmsg.GetErrMsg(code),
-		"code": code,
-	})
+	msg, code := validator.Validate(newStatus)
+	if code == errmsg.SUCCESS {
+		code = service.ModifyAdvisorStatus(id, newStatus.Status)
+	}
+	commonReturn(ctx, code, msg, returnData)
+	return
 }

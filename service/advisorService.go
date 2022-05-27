@@ -3,8 +3,7 @@ package service
 import (
 	qb "github.com/didi/gendry/builder"
 	"github.com/didi/gendry/scanner"
-	"github.com/fatih/structs"
-	"service/model"
+	"go.uber.org/zap"
 	"service/utils"
 	"service/utils/errmsg"
 	"service/utils/logger"
@@ -12,56 +11,9 @@ import (
 
 var ADVISORTABLE = "advisor"
 
-// NewAdvisor 新增一个顾问信息
-func NewAdvisor(model *model.Advisor) int {
-	// 转化数据并生成sql语句
-	var data []map[string]interface{}
-	data = append(data, structs.Map(model))
-	cond, vals, err := qb.BuildInsert(ADVISORTABLE, data)
-	if err != nil {
-		logger.GendryError(err)
-		return errmsg.ERROR_SQL_BUILD
-	}
-
-	// 执行sql语句
-	_, err = utils.DbConn.Exec(cond, vals...)
-	if err != nil {
-		logger.SqlInsertError(err)
-		return errmsg.ERROR_SQL_BUILD
-	}
-	return errmsg.SUCCESS
-}
-
-// UpdateAdvisor 修改顾问的相关信息
-func UpdateAdvisor(model *model.Advisor) int {
+func GetAdvisorInfo(Id int64) (int, interface{}) {
 	where := map[string]interface{}{
-		"phone": model.Phone,
-	}
-	// 把新的角色直接转化为map,去掉其中的value为空的key和其他相关值
-	// phone,password,coin不可直接更新
-	updates := structs.Map(model)
-	delete(updates, "phone")
-	delete(updates, "password")
-	delete(updates, "coin")
-	delete(updates, "total_order_num")
-	delete(updates, "rank")
-	delete(updates, "rank_num")
-	cond, vals, err := qb.BuildUpdate(ADVISORTABLE, where, updates)
-	if err != nil {
-		logger.GendryError(err)
-		return errmsg.ERROR_SQL_BUILD
-	}
-	_, err = utils.DbConn.Exec(cond, vals...)
-	if err != nil {
-		logger.SqlUpdateError(err)
-		return errmsg.ERROR_MYSQL
-	}
-	return errmsg.SUCCESS
-}
-
-func GetAdvisorInfo(phone string) (int, model.Advisor) {
-	where := map[string]interface{}{
-		"phone": phone,
+		"id": Id,
 	}
 	selects := []string{
 		"name", "phone", "coin", "total_order_num", "status",
@@ -69,19 +21,20 @@ func GetAdvisorInfo(phone string) (int, model.Advisor) {
 	}
 	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {
-		logger.GendryError(err)
-		return errmsg.ERROR_SQL_BUILD, model.Advisor{}
+		logger.Log.Error("获取顾问信息错误，编译SQL错误", zap.Error(err))
+		return errmsg.ERROR_SQL_BUILD, nil
 	}
-	row := utils.DbConn.QueryRow(cond, values...)
-	res := model.Advisor{}
-	// 能不能直接自动赋值到结构体对应的字段?
-	err = row.Scan(
-		&res.Name, &res.Phone, &res.Coin, &res.TotalOrderNum, &res.Status,
-		&res.Rank, &res.RankNum, &res.WorkExperience, &res.Bio, &res.About,
-	)
+	row, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
-		logger.SqlSelectError(err)
-		return errmsg.ERROR_MYSQL, model.Advisor{}
+		logger.Log.Error("数据库查询出错", zap.Error(err))
+		return errmsg.ERROR_MYSQL, nil
+	}
+	res, err := scanner.ScanMapDecodeClose(row)
+	if err != nil {
+		logger.Log.Error("gendry scanner赋值出错", zap.Error(err))
+	}
+	if res == nil {
+		return errmsg.ERROR_ADVISOR_NOT_EXIST, nil
 	}
 	return errmsg.SUCCESS, res
 }
@@ -95,39 +48,39 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	selects := []string{
 		"phone", "name", "bio",
 	}
-	cond, vals, err := qb.BuildSelect(ADVISORTABLE, where, selects)
+	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {
-		logger.GendryError(err)
-		return errmsg.ERROR_SQL_BUILD, []map[string]interface{}{}
+		logger.GendryError("GetAdvisorList", err)
+		return errmsg.ERROR_SQL_BUILD, nil
 	}
-	rows, err := utils.DbConn.Query(cond, vals...)
+	rows, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
-		logger.SqlSelectError(err)
-		return errmsg.ERROR, []map[string]interface{}{}
+		logger.SqlError("GetAdvisorList", "select", err)
+		return errmsg.ERROR, nil
 	}
 	res, err := scanner.ScanMapDecodeClose(rows)
 	if err != nil {
-		logger.GendryError(err)
-		return errmsg.ERROR_SQL_BUILD, []map[string]interface{}{}
+		logger.GendryError("GetAdvisorList", err)
+		return errmsg.ERROR_SQL_BUILD, nil
 	}
 	return errmsg.SUCCESS, res
 }
 
-func ModifyAdvisorStatus(phone string, newStatus int) int {
+func ModifyAdvisorStatus(id int64, newStatus int) int {
 	where := map[string]interface{}{
-		"phone": phone,
+		"id": id,
 	}
 	updates := map[string]interface{}{
 		"status": newStatus,
 	}
-	cond, vals, err := qb.BuildUpdate(ADVISORTABLE, where, updates)
+	cond, values, err := qb.BuildUpdate(ADVISORTABLE, where, updates)
 	if err != nil {
-		logger.GendryError(err)
+		logger.GendryError("ModifyAdvisorStatus", err)
 		return errmsg.ERROR_SQL_BUILD
 	}
-	_, err = utils.DbConn.Exec(cond, vals...)
+	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
-		logger.SqlUpdateError(err)
+		logger.SqlError("ModifyAdviosrStatus", "update", err)
 		return errmsg.ERROR_MYSQL
 	}
 	return errmsg.SUCCESS

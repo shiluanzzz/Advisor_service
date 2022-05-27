@@ -23,4 +23,5 @@ func InitDB() {
 	if err != nil {
 		log.Fatalln("database connect error!", err)
 	}
+	//defer DbConn.Close()
 }

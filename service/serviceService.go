@@ -1,130 +1,110 @@
 package service
 
 import (
-	"database/sql"
 	qb "github.com/didi/gendry/builder"
+	"github.com/didi/gendry/scanner"
 	"github.com/fatih/structs"
-	"go.uber.org/zap"
+	_ "github.com/go-sql-driver/mysql"
 	"service/model"
 	"service/utils"
 	"service/utils/errmsg"
 	"service/utils/logger"
 )
 
-var SERVICEKINDTABLE = "service_kind"
 var SERVICETABLE = "service"
 
-// NewService 新增一个顾客的服务
-func NewService(model *model.Service) int {
+// NewService 新增一个顾客的服务 根据顾问的ID直接新建一套服务
+func NewService(advisorId int64) int {
 	var data []map[string]interface{}
-	newData := structs.Map(model)
-	// id表为另外一个表
-	delete(newData, "service_name")
-	data = append(data, newData)
-	cond, vals, err := qb.BuildInsert(SERVICETABLE, data)
+	for k, v := range model.ServiceKind {
+		data = append(data,
+			structs.Map(model.Service{
+				AdvisorId:   advisorId,
+				ServiceName: v,
+				ServiceId:   k,
+				Price:       1,
+				Status:      0,
+			}),
+		)
+	}
+	cond, values, err := qb.BuildInsert(SERVICETABLE, data)
 	if err != nil {
-		logger.GendryError(err)
+		logger.GendryError("NewService", err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	// 执行sql语句
-	_, err = utils.DbConn.Exec(cond, vals...)
+	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
-		logger.SqlInsertError(err)
+		logger.SqlError("NewService", "Insert", err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	return errmsg.SUCCESS
 }
 
-// GetServiceId 获取service的ID 如果不存在就新建一个ID并返回
-func GetServiceId(serviceName string) int {
-	row := utils.DbConn.QueryRow("select id from service_kind where name=?", serviceName)
-	var id int
-	err := row.Scan(&id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return newServiceKind(serviceName)
-		}
-		logger.Log.Error("获取服务ID错误", zap.Error(err))
-		return -1
-	}
-	return id
-}
-
-// 新增一个服务类型
-func newServiceKind(serviceName string) int {
-	res, err := utils.DbConn.Exec("insert into service_kind(name) values (?)", serviceName)
-	if err != nil {
-		logger.SqlInsertError(err)
-		return -1
-	}
-	newId, _ := res.LastInsertId()
-	return int(newId)
-}
-
-// CheckService 检查顾问是否存在两种相同的服务
-func CheckService(ServiceId int, AdvisorPhone string) int {
-	where := map[string]interface{}{
-		"service_id":    ServiceId,
-		"advisor_phone": AdvisorPhone,
-	}
-	selects := []string{"price"}
-	cond, vals, err := qb.BuildSelect(SERVICETABLE, where, selects)
-	if err != nil {
-		logger.GendryError(err)
-		return errmsg.ERROR_SQL_BUILD
-	}
-	var temp float32
-	row := utils.DbConn.QueryRow(cond, vals...)
-	err = row.Scan(&temp)
-	if err == sql.ErrNoRows {
-		return errmsg.ERROR_SERVICE_NOT_EXIST
-	} else if err != nil {
-		logger.SqlSelectError(err)
-		return errmsg.ERROR_MYSQL
-	}
-	return errmsg.ERROR_SERVICE_EXIST
-}
-
 // ModifyServicePrice 修改服务的价格
-func ModifyServicePrice(phone string, id int, price float32) int {
+func ModifyServicePrice(advisorId int64, serviceId int, price float32) int {
 	where := map[string]interface{}{
-		"service_id":    id,
-		"advisor_phone": phone,
+		"service_id": serviceId,
+		"advisor_id": advisorId,
 	}
 	updates := map[string]interface{}{
 		"price": price,
 	}
-	cond, vals, err := qb.BuildUpdate(SERVICETABLE, where, updates)
+	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
-		logger.GendryError(err)
+		logger.GendryError("ModifyServicePrice", err)
 		return errmsg.ERROR_SQL_BUILD
 	}
-	_, err = utils.DbConn.Exec(cond, vals...)
+	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
-		logger.SqlUpdateError(err)
+		logger.SqlError("ModifyServicePrice", "Modify", err)
 		return errmsg.ERROR_MYSQL
 	}
 	return errmsg.SUCCESS
 }
 
 // ModifyServiceStatus 修改服务状态
-func ModifyServiceStatus(phone string, id int, newStatus int) int {
+func ModifyServiceStatus(advisorId int64, serviceId int, newStatus int) int {
 	where := map[string]interface{}{
-		"service_id":    id,
-		"advisor_phone": phone,
+		"service_id": serviceId,
+		"advisor_id": advisorId,
 	}
 	updates := map[string]interface{}{
 		"status": newStatus,
 	}
-	cond, vals, err := qb.BuildUpdate(SERVICETABLE, where, updates)
+	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
-		logger.GendryError(err)
+		logger.GendryError("ModifyServiceStatus", err)
 		return errmsg.ERROR_SQL_BUILD
 	}
-	_, err = utils.DbConn.Exec(cond, vals...)
+	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
-		logger.SqlUpdateError(err)
+		logger.SqlError("ModifyServiceStatus", "update", err)
 		return errmsg.ERROR_MYSQL
 	}
 	return errmsg.SUCCESS
+}
+
+func GetAdvisorService(id int64) (int, interface{}) {
+	where := map[string]interface{}{
+		"advisor_id": id,
+		"status":     1,
+	}
+	selects := []string{"service_name", "service_id", "price"}
+	cond, values, err := qb.BuildSelect(SERVICETABLE, where, selects)
+	if err != nil {
+		logger.GendryError("GetAdvisorService", err)
+		return errmsg.ERROR_SQL_BUILD, nil
+	}
+	rows, err := utils.DbConn.Query(cond, values...)
+	if err != nil {
+		logger.SqlError("GetAdvisorService", "select", err)
+		return errmsg.ERROR_MYSQL, nil
+	}
+	res, err := scanner.ScanMapDecodeClose(rows)
+	if err != nil {
+		logger.GendryError("GetAdvisorService", err)
+		return errmsg.ERROR_SQL_BUILD, nil
+	}
+	return errmsg.SUCCESS, res
 }

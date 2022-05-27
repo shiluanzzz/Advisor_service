@@ -20,13 +20,13 @@ func CheckPhoneExist(tableName string, phone interface{}) int {
 	selectFields := []string{"phone"}
 	cond, values, err := qb.BuildSelect(tableName, where, selectFields)
 	if err != nil {
-		logger.GendryError(err)
+		logger.GendryError("CheckPhoneExist", err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	// 查询
 	rows, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
-		logger.SqlSelectError(err)
+		logger.SqlError("CheckPhoneExist", "select", err)
 		return errmsg.ERROR_MYSQL
 	}
 	// 判断是否存在重复key
@@ -56,12 +56,12 @@ func ChangePWD(tableName string, id int64, newPwd string) int {
 	// 构造sql 执行更新
 	cond, values, err := qb.BuildUpdate(tableName, where, updates)
 	if err != nil {
-		logger.GendryError(err)
+		logger.GendryError("ChangePWD", err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
-		logger.SqlUpdateError(err)
+		logger.SqlError("ChangePWD", "update", err)
 		return errmsg.ERROR_MYSQL
 	}
 	return errmsg.SUCCESS
@@ -98,7 +98,7 @@ func CheckRolePwd(table string, id int64, pwd string) int {
 	selectFiled := []string{"password"}
 	cond, value, err := qb.BuildSelect(table, where, selectFiled)
 	if err != nil {
-		logger.GendryError(err)
+		logger.GendryError("CheckRolePwd", err)
 		return errmsg.ERROR_SQL_BUILD
 	}
 	rows := utils.DbConn.QueryRow(cond, value...)
@@ -108,10 +108,30 @@ func CheckRolePwd(table string, id int64, pwd string) int {
 		if err == sql.ErrNoRows {
 			return errmsg.ERROR_USER_NOT_EXIST
 		} else {
-			logger.SqlSelectError(err)
+			logger.SqlError("CheckRolePwd", "select", err)
 			return errmsg.ERROR_PASSWORD_WORON
 		}
 	}
 	// 查到了加密密码在比对
 	return checkPwd(pwd, encryptPwd)
+}
+
+// Update 更新用户或者顾问的信息
+func Update(table string, Info map[string]interface{}) int {
+
+	where := map[string]interface{}{
+		"id": Info["id"],
+	}
+	// 构造sql 执行更新
+	cond, values, err := qb.BuildUpdate(table, where, Info)
+	if err != nil {
+		logger.Log.Error("更新信息错误，编译SQL错误", zap.Error(err))
+		return errmsg.ERROR_SQL_BUILD
+	}
+	_, err = utils.DbConn.Exec(cond, values...)
+	if err != nil {
+		logger.SqlError("UpdateUser", "update", err)
+		return errmsg.ERROR_MYSQL
+	}
+	return errmsg.SUCCESS
 }

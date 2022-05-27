@@ -1,10 +1,12 @@
 package logger
 
 import (
+	"fmt"
+	"service/utils"
+
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"service/utils"
 )
 
 var Log *zap.Logger
@@ -20,7 +22,7 @@ func init() {
 		return level <= zap.InfoLevel
 	})
 	errorLevel := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
-		return level >= zap.WarnLevel
+		return level > zap.WarnLevel
 	})
 	warnLevel := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
 		return level == zap.WarnLevel
@@ -36,7 +38,12 @@ func init() {
 }
 func getLogEncoder() zapcore.Encoder {
 	// TODO 两种config有什么区别?
-	encoderConfig := zap.NewProductionEncoderConfig()
+	var encoderConfig zapcore.EncoderConfig
+	if utils.LoggerMode == "development" {
+		encoderConfig = zap.NewDevelopmentEncoderConfig()
+	} else {
+		encoderConfig = zap.NewProductionEncoderConfig()
+	}
 	//更改打印的时间格式
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	// TODO ?
@@ -60,19 +67,10 @@ func getLogWriter(filepath string) zapcore.WriteSyncer {
 	})
 }
 
-// common log
-func GendryError(err error) {
-	Log.Error("Gendry错误", zap.Error(err))
+// common log TODO:显示上一层的调用
+func GendryError(funcName string, err error) {
+	Log.Error("Gendry错误", zap.Error(err), zap.String("function", funcName))
 }
-func SqlInsertError(err error) {
-	Log.Error("Mysql Insert error", zap.Error(err))
-}
-func SqlUpdateError(err error) {
-	Log.Error("Mysql Update error", zap.Error(err))
-}
-func SqlSelectError(err error) {
-	Log.Error("Mysql Select error", zap.Error(err))
-}
-func SqlDeleteError(err error) {
-	Log.Error("Mysql Delete error", zap.Error(err))
+func SqlError(funcName string, kind string, err error) {
+	Log.Error(fmt.Sprintf("mysql %s error", kind), zap.Error(err), zap.String("function", funcName))
 }

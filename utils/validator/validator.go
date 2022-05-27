@@ -12,6 +12,7 @@ import (
 func Validate(data interface{}) (string, int) {
 	validate := validator.New()
 	// 错误语言翻译成中文
+	// TODO 自定义显示tag名称
 	uni := uTran.New(zh_Hans_CN.New())
 	trans, _ := uni.GetTranslator("zh_Hans_Cn")
 	err := zhTrans.RegisterDefaultTranslations(validate, trans)

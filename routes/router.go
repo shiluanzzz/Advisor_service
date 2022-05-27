@@ -36,7 +36,6 @@ func InitRouter() {
 	Service := r.Group("service")
 	Service.Use(middleware.JwtToken())
 	{
-		Service.POST("/add", v1.NewService)
 		Service.POST("/status", v1.ModifyServiceStatus)
 		Service.POST("/price", v1.ModifyServicePrice)
 	}
