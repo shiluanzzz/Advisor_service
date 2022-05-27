@@ -11,7 +11,7 @@ type UserInfo struct {
 	Coin   float64 `structs:"coin"   json:"coin"   validate:"number"`
 }
 
-type UserLogin struct {
+type Login struct {
 	Id       int64  `structs:"id" json:"id" form:"id"`
 	Phone    string `structs:"phone" json:"phone" form:"phone" validate:"required,number,len=11"`
 	Password string `structs:"password" json:"password" form:"password" validate:"required,min=6,max=12"`
@@ -19,7 +19,7 @@ type UserLogin struct {
 }
 type ChangePwd struct {
 	//长度限制，新旧密码不能相等
-	Id     int64
-	NewPwd string `form:"newPassword" json:"newPwd" validate:"required,min=6,max=12"`
-	OldPwd string `form:"oldPassword" json:"oldPwd" validate:"required,min=6,max=12,nefield=NewPwd"`
+	Id          int64
+	NewPassword string `form:"newPassword" json:"newPassword" validate:"required,min=6,max=12"`
+	OldPassword string `form:"oldPassword" json:"oldPassword" validate:"required,min=6,max=12,nefield=NewPassword"`
 }
