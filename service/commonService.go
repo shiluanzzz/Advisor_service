@@ -11,6 +11,8 @@ import (
 	"service/utils/logger"
 )
 
+var TABLES = []string{SERVICETABLE, USERTABLE}
+
 // CheckPhoneExist 检查手机号是否重复 true=已经存在 false=不存在
 func CheckPhoneExist(tableName string, phone interface{}) int {
 	// 生产sql语句
@@ -134,4 +136,26 @@ func Update(table string, Info map[string]interface{}) int {
 		return errmsg.ERROR_MYSQL
 	}
 	return errmsg.SUCCESS
+}
+
+// CheckIdExist 用于Token中检查Id和table是否存在
+func CheckIdExist(id int64, table string) int {
+	valid := false
+	for _, v := range TABLES {
+		if v == table {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return errmsg.ErrorTokenRoleNotExist
+	}
+	code := CheckRolePwd(table, id, "")
+	if code == errmsg.ERROR_USER_NOT_EXIST {
+		return errmsg.ErrorTokenIdNotExist
+	} else if code == errmsg.ERROR_PASSWORD_WORON {
+		return errmsg.SUCCESS
+	} else {
+		return code
+	}
 }

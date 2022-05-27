@@ -5,6 +5,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"go.uber.org/zap"
 	"net/http"
+	"service/service"
 	"service/utils"
 	"service/utils/errmsg"
 	"service/utils/logger"
@@ -114,6 +115,16 @@ func JwtToken() gin.HandlerFunc {
 				"code": code,
 				"msg":  errmsg.GetErrMsg(code),
 			})
+			c.Abort()
+			return
+		}
+		code = service.CheckIdExist(key.Id, key.Role)
+		if code != errmsg.SUCCESS {
+			c.JSON(http.StatusOK, gin.H{
+				"code": code,
+				"msg":  errmsg.GetErrMsg(code),
+			})
+			c.Abort()
 			return
 		}
 		// 校验ID是否存在
