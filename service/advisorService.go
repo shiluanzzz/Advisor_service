@@ -11,7 +11,7 @@ import (
 
 var ADVISORTABLE = "advisor"
 
-func GetAdvisorInfo(Id int64) (int, interface{}) {
+func GetAdvisorInfo(Id int64) (int, []map[string]interface{}) {
 	where := map[string]interface{}{
 		"id": Id,
 	}

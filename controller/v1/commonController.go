@@ -12,6 +12,8 @@ import (
 	"service/utils/logger"
 	"service/utils/validator"
 	"strconv"
+	"strings"
+	"unicode"
 )
 
 func commonReturn(ctx *gin.Context, code int, msg string, data interface{}) {
@@ -120,4 +122,35 @@ func UpdatePwdControl(table string, ctx *gin.Context) {
 	}
 	logger.Log.Info(fmt.Sprintf("%s 修改密码", table), zap.String("id", strconv.FormatInt(id, 10)))
 	commonReturn(ctx, code, "", data)
+}
+
+func Case2CamelCase(str string) string {
+	str = strings.Replace(str, "_", " ", -1)
+	str = strings.Title(str)
+	str = strings.Replace(str, " ", "", -1)
+	return LowFirst(str)
+}
+
+// 首字母小写
+func LowFirst(str string) string {
+	for i, v := range str {
+		return string(unicode.ToLower(v)) + str[i+1:]
+	}
+	return ""
+}
+
+// 把数据转换为小驼峰返回
+func TransformDataSlice(data []map[string]interface{}) []map[string]interface{} {
+	var res []map[string]interface{}
+	for _, each := range data {
+		res = append(res, TransformData(each))
+	}
+	return res
+}
+func TransformData(data map[string]interface{}) map[string]interface{} {
+	t := map[string]interface{}{}
+	for k, v := range data {
+		t[Case2CamelCase(k)] = v
+	}
+	return t
 }

@@ -18,6 +18,7 @@ func NewAdvisorController(ctx *gin.Context) {
 func UpdateAdvisorController(ctx *gin.Context) {
 
 	var data map[string]interface{}
+	//data := map[string]interface{}{}
 	var code int
 	// 数据绑定
 	err := ctx.ShouldBindJSON(&data)
@@ -28,18 +29,24 @@ func UpdateAdvisorController(ctx *gin.Context) {
 	// 数据校验 将不同的字段绑定到不同的校验函数中，使用反射做校验
 	// 不存在的字段在函数中做了检验
 	validateFunc := map[string]interface{}{
-		"name":           validator.Name,
-		"phone":          validator.Phone,
-		"workExperience": validator.WorkExperience,
-		"bio":            validator.Bio,
-		"about":          validator.About,
+		"name":            validator.Name,
+		"phone":           validator.Phone,
+		"work_experience": validator.WorkExperience,
+		"bio":             validator.Bio,
+		"about":           validator.About,
+	}
+	if value := data["workExperience"]; value != nil {
+		data["work_experience"] = int(value.(float64))
+		value = int(value.(float64))
+		delete(data, "workExperience")
 	}
 	for key, value := range data {
 		// 判断是否传的都是字符类型 手机号码传数字会被识别为float不好处理
+		// json中的字符被识别为float
 		if key == "phone" && reflect.TypeOf(value).Kind() != reflect.TypeOf("1").Kind() {
-			commonReturn(ctx, errmsg.ERROR_PHONE_INPUT, "", data)
-			return
+			value = strconv.FormatFloat(value.(float64), 'f', 0, 64)
 		}
+
 		msg, code := validator.CallFunc(validateFunc, key, value)
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn("数据校验非法", zap.Error(err))
@@ -96,14 +103,14 @@ func GetAdvisorInfo(ctx *gin.Context) {
 	}
 	code, res := service.GetAdvisorInfo(data.Id)
 
-	var serviceData interface{}
+	var serviceData []map[string]interface{}
 	if code == errmsg.SUCCESS {
 		code, serviceData = service.GetAdvisorService(data.Id)
 	}
 	commonReturn(ctx, code, "",
 		map[string]interface{}{
-			"info":    res,
-			"service": serviceData,
+			"info":    TransformDataSlice(res),
+			"service": TransformDataSlice(serviceData),
 		},
 	)
 }
@@ -115,7 +122,7 @@ func ModifyAdvisorStatus(ctx *gin.Context) {
 	err := ctx.ShouldBind(&newStatus)
 	returnData := map[string]interface{}{
 		"id":     id,
-		"status": newStatus,
+		"status": newStatus.Status,
 	}
 	if err != nil {
 		GinBindError(ctx, err, "ModifyAdvisorStatus", returnData)
