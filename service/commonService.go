@@ -12,7 +12,7 @@ import (
 )
 
 // CheckPhoneExist 检查手机号是否重复 true=已经存在 false=不存在
-func CheckPhoneExist(tableName, phone string) int {
+func CheckPhoneExist(tableName string, phone interface{}) int {
 	// 生产sql语句
 	where := map[string]interface{}{
 		"phone": phone,
@@ -43,23 +43,23 @@ func CheckPhoneExist(tableName, phone string) int {
 }
 
 // ChangePWD 更改用户密码
-func ChangePWD(tableName, phone, newPwd string) int {
+func ChangePWD(tableName string, id int64, newPwd string) int {
 	// 密码加密
 	newPwd = GetPwd(newPwd)
 	// 构造sql
 	where := map[string]interface{}{
-		"phone": phone,
+		"id": id,
 	}
 	updates := map[string]interface{}{
 		"password": newPwd,
 	}
 	// 构造sql 执行更新
-	cond, vals, err := qb.BuildUpdate(tableName, where, updates)
+	cond, values, err := qb.BuildUpdate(tableName, where, updates)
 	if err != nil {
 		logger.GendryError(err)
 		return errmsg.ERROR_SQL_BUILD
 	}
-	_, err = utils.DbConn.Exec(cond, vals...)
+	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
 		logger.SqlUpdateError(err)
 		return errmsg.ERROR_MYSQL
@@ -89,11 +89,11 @@ func checkPwd(pwd string, encryptPwd string) int {
 
 // CheckRolePwd 检查不同的角色对应的用户密码是否对应
 // table:不同角色对应的表名 phone:手机号 pwd:密码
-func CheckRolePwd(table, phone string, pwd string) int {
+func CheckRolePwd(table string, id int64, pwd string) int {
 	var encryptPwd string
 	// 从数据库中查加密后的密码
 	where := map[string]interface{}{
-		"phone": phone,
+		"id": id,
 	}
 	selectFiled := []string{"password"}
 	cond, value, err := qb.BuildSelect(table, where, selectFiled)
@@ -102,6 +102,7 @@ func CheckRolePwd(table, phone string, pwd string) int {
 		return errmsg.ERROR_SQL_BUILD
 	}
 	rows := utils.DbConn.QueryRow(cond, value...)
+	// TODO
 	err = rows.Scan(&encryptPwd)
 	if err != nil {
 		if err == sql.ErrNoRows {

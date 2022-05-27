@@ -15,7 +15,7 @@ func InitRouter() {
 	r.Use(middleware.Log())
 	UserRouter := r.Group("user")
 	{
-		UserRouter.POST("/add", v1.NewUserController)
+		UserRouter.POST("/add", v1.NewUser)
 		UserRouter.GET("/login", v1.UserLogin)
 		UserRouter.Use(middleware.JwtToken())
 		UserRouter.POST("/pwd", v1.UpdateUserPwd)
@@ -26,7 +26,7 @@ func InitRouter() {
 	{
 		AdvisorRouter.POST("/add", v1.NewAdvisorController)
 		AdvisorRouter.GET("/login", v1.AdvisorLogin)
-		AdvisorRouter.GET("/getList", v1.GetAdvisorList)
+		AdvisorRouter.GET("/list/:page", v1.GetAdvisorList)
 		AdvisorRouter.Use(middleware.JwtToken())
 		AdvisorRouter.POST("/update", v1.UpdateAdvisorController)
 		AdvisorRouter.POST("/pwd", v1.UpdateAdvisorPwd)

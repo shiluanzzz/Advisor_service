@@ -2,6 +2,7 @@ package utils
 
 import "log"
 import "gopkg.in/ini.v1"
+import "github.com/didi/gendry/scanner"
 
 var (
 	Db         string
@@ -31,6 +32,12 @@ func init() {
 	LoadLogger(file)
 }
 
+// 一些库的相关设置
+func Setting() {
+	// 用于scanner的字段反射
+	scanner.SetTagName("structs")
+}
+
 // 读取数据库相关配置文件
 func LoadDBConfig(file *ini.File) {
 	var err error
@@ -55,7 +62,7 @@ func LoadServer(file *ini.File) {
 // 读取日志相关配置文件
 func LoadLogger(file *ini.File) {
 	LoggerMode = file.Section("logger").Key("LoggerMode").MustString("development")
-	InfoLog = file.Section("loggeer").Key("InfoLog").MustString("./info.log")
-	ErrorLog = file.Section("loggeer").Key("ErrorLog").MustString("./error.log")
-	WarnLog = file.Section("loggeer").Key("WarnLog").MustString("./warn.log")
+	InfoLog = file.Section("logger").Key("InfoLog").MustString("./info.log")
+	ErrorLog = file.Section("logger").Key("ErrorLog").MustString("./error.log")
+	WarnLog = file.Section("logger").Key("WarnLog").MustString("./warn.log")
 }
