@@ -25,14 +25,14 @@ func NewUser(table string, user *model.Login) (int, int64) {
 	cond, values, err := qb.BuildInsert(table, data)
 	if err != nil {
 		logger.Log.Error("新增用户错误，编译SQL错误", zap.Error(err))
-		return errmsg.ERROR_SQL_BUILD, -1
+		return errmsg.ErrorSqlBuild, -1
 	}
 
 	// 执行sql语句
 	row, err := utils.DbConn.Exec(cond, values...)
 	if err != nil {
 		logger.Log.Error("数据库插入错误", zap.Error(err))
-		return errmsg.ERROR_MYSQL, -1
+		return errmsg.ErrorMysql, -1
 	}
 	// 获取用户的主键ID
 	user.Id, err = row.LastInsertId()
@@ -49,13 +49,13 @@ func GetId(table, phone string) (id int64, errCode int) {
 	cond, values, err := qb.BuildSelect(table, where, selects)
 	if err != nil {
 		logger.Log.Error("获取ID,编译SQL错误", zap.Error(err))
-		return -1, errmsg.ERROR_SQL_BUILD
+		return -1, errmsg.ErrorSqlBuild
 	}
 	row := utils.DbConn.QueryRow(cond, values...)
 	var res int64
 	err = row.Scan(&res)
 	if err == sql.ErrNoRows {
-		return -1, errmsg.ERROR_USER_NOT_EXIST
+		return -1, errmsg.ErrorUserNotExist
 	} else {
 		return res, errmsg.SUCCESS
 	}
@@ -71,13 +71,13 @@ func GetUserInfo(userId int64) (int, interface{}) {
 	cond, values, err := qb.BuildSelect(USERTABLE, where, selects)
 	if err != nil {
 		logger.Log.Error("获取用户信息错误，编译SQL错误", zap.Error(err))
-		return errmsg.ERROR_SQL_BUILD, nil
+		return errmsg.ErrorSqlBuild, nil
 	}
 
 	row, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
 		logger.Log.Error("数据库查询出错", zap.Error(err))
-		return errmsg.ERROR_MYSQL, nil
+		return errmsg.ErrorMysql, nil
 	}
 	res, err := scanner.ScanMapDecodeClose(row)
 	if err != nil {

@@ -126,6 +126,7 @@ func UpdatePwdControl(table string, ctx *gin.Context) {
 
 func Case2CamelCase(str string) string {
 	str = strings.Replace(str, "_", " ", -1)
+	// TODO
 	str = strings.Title(str)
 	str = strings.Replace(str, " ", "", -1)
 	return LowFirst(str)

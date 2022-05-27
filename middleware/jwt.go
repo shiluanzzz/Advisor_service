@@ -57,7 +57,7 @@ func CheckToken(token string) (*MyClaims, int) {
 	)
 	if err != nil {
 		if err.(*jwt.ValidationError).Errors == jwt.ValidationErrorExpired {
-			return nil, errmsg.ERROR_TOKEN_TIME_OUT
+			return nil, errmsg.ErrorTokenTimeOut
 		} else {
 			logger.Log.Error("Jwt校验错误", zap.Error(err))
 		}
@@ -66,7 +66,7 @@ func CheckToken(token string) (*MyClaims, int) {
 	if key, _ := setToken.Claims.(*MyClaims); setToken.Valid {
 		return key, errmsg.SUCCESS
 	} else {
-		return nil, errmsg.ERROR_TOKEN_WOKEN_WRONG
+		return nil, errmsg.ErrorTokenWokenWrong
 	}
 }
 
@@ -79,7 +79,7 @@ func JwtToken() gin.HandlerFunc {
 		var code int
 		// not exist
 		if tokenHandler == "" {
-			code = errmsg.ERROR_TOKEN_NOT_EXIST
+			code = errmsg.ErrorTokenNotExist
 			c.JSON(http.StatusOK, gin.H{
 				"code": code,
 				"msg":  errmsg.GetErrMsg(code),
@@ -90,7 +90,7 @@ func JwtToken() gin.HandlerFunc {
 		// check the token format
 		checkToken := strings.SplitN(tokenHandler, " ", 2)
 		if len(checkToken) != 2 && checkToken[0] != "Bearer" {
-			code = errmsg.ERROR_TOKEN_TYPE_WRONG
+			code = errmsg.ErrorTokenTypeWrong
 			c.JSON(http.StatusOK, gin.H{
 				"code": code,
 				"msg":  errmsg.GetErrMsg(code),
@@ -110,7 +110,7 @@ func JwtToken() gin.HandlerFunc {
 		}
 		// if the token timeout
 		if time.Now().Unix() > key.ExpiresAt {
-			code = errmsg.ERROR_TOKEN_TIME_OUT
+			code = errmsg.ErrorTokenTimeOut
 			c.JSON(http.StatusOK, gin.H{
 				"code": code,
 				"msg":  errmsg.GetErrMsg(code),

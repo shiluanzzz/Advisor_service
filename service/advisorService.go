@@ -22,19 +22,19 @@ func GetAdvisorInfo(Id int64) (int, []map[string]interface{}) {
 	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {
 		logger.Log.Error("获取顾问信息错误，编译SQL错误", zap.Error(err))
-		return errmsg.ERROR_SQL_BUILD, nil
+		return errmsg.ErrorSqlBuild, nil
 	}
 	row, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
 		logger.Log.Error("数据库查询出错", zap.Error(err))
-		return errmsg.ERROR_MYSQL, nil
+		return errmsg.ErrorMysql, nil
 	}
 	res, err := scanner.ScanMapDecodeClose(row)
 	if err != nil {
 		logger.Log.Error("gendry scanner赋值出错", zap.Error(err))
 	}
 	if res == nil {
-		return errmsg.ERROR_ADVISOR_NOT_EXIST, nil
+		return errmsg.ErrorAdvisorNotExist, nil
 	}
 	return errmsg.SUCCESS, res
 }
@@ -51,7 +51,7 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {
 		logger.GendryError("GetAdvisorList", err)
-		return errmsg.ERROR_SQL_BUILD, nil
+		return errmsg.ErrorSqlBuild, nil
 	}
 	rows, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
@@ -61,7 +61,7 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	res, err := scanner.ScanMapDecodeClose(rows)
 	if err != nil {
 		logger.GendryError("GetAdvisorList", err)
-		return errmsg.ERROR_SQL_BUILD, nil
+		return errmsg.ErrorSqlBuild, nil
 	}
 	return errmsg.SUCCESS, res
 }
@@ -76,12 +76,12 @@ func ModifyAdvisorStatus(id int64, newStatus int) int {
 	cond, values, err := qb.BuildUpdate(ADVISORTABLE, where, updates)
 	if err != nil {
 		logger.GendryError("ModifyAdvisorStatus", err)
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
 		logger.SqlError("ModifyAdviosrStatus", "update", err)
-		return errmsg.ERROR_MYSQL
+		return errmsg.ErrorMysql
 	}
 	return errmsg.SUCCESS
 }

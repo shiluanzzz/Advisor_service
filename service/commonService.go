@@ -23,13 +23,13 @@ func CheckPhoneExist(tableName string, phone interface{}) int {
 	cond, values, err := qb.BuildSelect(tableName, where, selectFields)
 	if err != nil {
 		logger.GendryError("CheckPhoneExist", err)
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	// 查询
 	rows, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
 		logger.SqlError("CheckPhoneExist", "select", err)
-		return errmsg.ERROR_MYSQL
+		return errmsg.ErrorMysql
 	}
 	// 判断是否存在重复key
 	var flag = false
@@ -38,7 +38,7 @@ func CheckPhoneExist(tableName string, phone interface{}) int {
 		break
 	}
 	if flag {
-		return errmsg.ERROR_USERPHONE_USED
+		return errmsg.ErrorUserphoneUsed
 	} else {
 		return errmsg.SUCCESS
 	}
@@ -59,12 +59,12 @@ func ChangePWD(tableName string, id int64, newPwd string) int {
 	cond, values, err := qb.BuildUpdate(tableName, where, updates)
 	if err != nil {
 		logger.GendryError("ChangePWD", err)
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
 		logger.SqlError("ChangePWD", "update", err)
-		return errmsg.ERROR_MYSQL
+		return errmsg.ErrorMysql
 	}
 	return errmsg.SUCCESS
 }
@@ -84,7 +84,7 @@ func GetPwd(pwd string) string {
 func checkPwd(pwd string, encryptPwd string) int {
 	err := bcrypt.CompareHashAndPassword([]byte(encryptPwd), []byte(pwd))
 	if err != nil {
-		return errmsg.ERROR_PASSWORD_WORON
+		return errmsg.ErrorPasswordWoron
 	}
 	return errmsg.SUCCESS
 }
@@ -101,17 +101,17 @@ func CheckRolePwd(table string, id int64, pwd string) int {
 	cond, value, err := qb.BuildSelect(table, where, selectFiled)
 	if err != nil {
 		logger.GendryError("CheckRolePwd", err)
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	rows := utils.DbConn.QueryRow(cond, value...)
 	// TODO
 	err = rows.Scan(&encryptPwd)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errmsg.ERROR_USER_NOT_EXIST
+			return errmsg.ErrorUserNotExist
 		} else {
 			logger.SqlError("CheckRolePwd", "select", err)
-			return errmsg.ERROR_PASSWORD_WORON
+			return errmsg.ErrorPasswordWoron
 		}
 	}
 	// 查到了加密密码在比对
@@ -128,12 +128,12 @@ func Update(table string, Info map[string]interface{}) int {
 	cond, values, err := qb.BuildUpdate(table, where, Info)
 	if err != nil {
 		logger.Log.Error("更新信息错误，编译SQL错误", zap.Error(err))
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
 		logger.SqlError("UpdateUser", "update", err)
-		return errmsg.ERROR_MYSQL
+		return errmsg.ErrorMysql
 	}
 	return errmsg.SUCCESS
 }
@@ -151,9 +151,9 @@ func CheckIdExist(id int64, table string) int {
 		return errmsg.ErrorTokenRoleNotExist
 	}
 	code := CheckRolePwd(table, id, "")
-	if code == errmsg.ERROR_USER_NOT_EXIST {
+	if code == errmsg.ErrorUserNotExist {
 		return errmsg.ErrorTokenIdNotExist
-	} else if code == errmsg.ERROR_PASSWORD_WORON {
+	} else if code == errmsg.ErrorPasswordWoron {
 		return errmsg.SUCCESS
 	} else {
 		return code

@@ -30,13 +30,13 @@ func NewService(advisorId int64) int {
 	cond, values, err := qb.BuildInsert(SERVICETABLE, data)
 	if err != nil {
 		logger.GendryError("NewService", err)
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	// 执行sql语句
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
 		logger.SqlError("NewService", "Insert", err)
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	return errmsg.SUCCESS
 }
@@ -53,12 +53,12 @@ func ModifyServicePrice(advisorId int64, serviceId int, price float32) int {
 	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
 		logger.GendryError("ModifyServicePrice", err)
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
 		logger.SqlError("ModifyServicePrice", "Modify", err)
-		return errmsg.ERROR_MYSQL
+		return errmsg.ErrorMysql
 	}
 	return errmsg.SUCCESS
 }
@@ -75,17 +75,17 @@ func ModifyServiceStatus(advisorId int64, serviceId int, newStatus int) int {
 	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
 		logger.GendryError("ModifyServiceStatus", err)
-		return errmsg.ERROR_SQL_BUILD
+		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
 		logger.SqlError("ModifyServiceStatus", "update", err)
-		return errmsg.ERROR_MYSQL
+		return errmsg.ErrorMysql
 	}
 	return errmsg.SUCCESS
 }
 
-func GetAdvisorService(id int64) (int, interface{}) {
+func GetAdvisorService(id int64) (int, []map[string]interface{}) {
 	where := map[string]interface{}{
 		"advisor_id": id,
 		"status":     1,
@@ -94,17 +94,17 @@ func GetAdvisorService(id int64) (int, interface{}) {
 	cond, values, err := qb.BuildSelect(SERVICETABLE, where, selects)
 	if err != nil {
 		logger.GendryError("GetAdvisorService", err)
-		return errmsg.ERROR_SQL_BUILD, nil
+		return errmsg.ErrorSqlBuild, nil
 	}
 	rows, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
 		logger.SqlError("GetAdvisorService", "select", err)
-		return errmsg.ERROR_MYSQL, nil
+		return errmsg.ErrorMysql, nil
 	}
 	res, err := scanner.ScanMapDecodeClose(rows)
 	if err != nil {
 		logger.GendryError("GetAdvisorService", err)
-		return errmsg.ERROR_SQL_BUILD, nil
+		return errmsg.ErrorSqlBuild, nil
 	}
 	return errmsg.SUCCESS, res
 }

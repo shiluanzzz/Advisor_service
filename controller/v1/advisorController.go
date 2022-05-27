@@ -78,7 +78,7 @@ func GetAdvisorList(ctx *gin.Context) {
 	page, err := strconv.Atoi(pageString)
 	var code int
 	if err != nil || page < 1 {
-		code = errmsg.ERROR_INPUT
+		code = errmsg.ErrorInput
 		commonReturn(ctx, code, "", map[string]int{"page": page})
 		return
 	}

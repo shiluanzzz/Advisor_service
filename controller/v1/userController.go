@@ -40,7 +40,7 @@ func UpdateUserInfoController(ctx *gin.Context) {
 	for key, value := range data {
 		// 判断是否传的都是字符类型 手机号码传数字会被识别为float不好处理
 		if key == "phone" && reflect.TypeOf(value).Kind() != reflect.TypeOf("1").Kind() {
-			commonReturn(ctx, errmsg.ERROR_PHONE_INPUT, "", &data)
+			commonReturn(ctx, errmsg.ErrorPhoneInput, "", &data)
 			return
 		}
 		msg, code := validator.CallFunc(validateFunc, key, value)
