@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	qb "github.com/didi/gendry/builder"
 	"github.com/didi/gendry/scanner"
 	"github.com/fatih/structs"
@@ -14,7 +15,7 @@ import (
 var SERVICETABLE = "service"
 
 // NewService 新增一个顾客的服务 根据顾问的ID直接新建一套服务
-func NewService(advisorId int64) int {
+func NewService(advisorId int64, tx *sql.Tx) int {
 	var data []map[string]interface{}
 	for k, v := range model.ServiceKind {
 		data = append(data,
@@ -33,7 +34,7 @@ func NewService(advisorId int64) int {
 		return errmsg.ErrorSqlBuild
 	}
 	// 执行sql语句
-	_, err = utils.DbConn.Exec(cond, values...)
+	_, err = tx.Exec(cond, values...)
 	if err != nil {
 		logger.SqlError("NewService", "Insert", err)
 		return errmsg.ErrorSqlBuild

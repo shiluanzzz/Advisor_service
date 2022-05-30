@@ -17,7 +17,7 @@ func ModifyServiceStatus(ctx *gin.Context) {
 	var data serviceStatus
 	err := ctx.ShouldBind(&data)
 	if err != nil {
-		GinBindError(ctx, err, "ModifyServiceStatus", data)
+		ginBindError(ctx, err, "ModifyServiceStatus", data)
 		return
 	}
 	// 数据校验
@@ -41,7 +41,7 @@ func ModifyServicePrice(ctx *gin.Context) {
 	err := ctx.ShouldBind(&data)
 	data.AdvisorId = ctx.GetInt64("id")
 	if err != nil {
-		GinBindError(ctx, err, "ModifyServiceStatus", data)
+		ginBindError(ctx, err, "ModifyServiceStatus", data)
 		return
 	}
 	// 数据校验
