@@ -15,7 +15,7 @@ import (
 var USERTABLE = "user"
 
 // NewUser 新增用户
-func NewUser(table string, user *model.Login) (int, int64) {
+func NewUser(table string, user *model.Login, tx *sql.Tx) (int, int64) {
 	// 转化数据并生成sql语句
 	var data []map[string]interface{}
 	// 去出token字段
@@ -27,9 +27,13 @@ func NewUser(table string, user *model.Login) (int, int64) {
 		logger.Log.Error("新增用户错误，编译SQL错误", zap.Error(err))
 		return errmsg.ErrorSqlBuild, -1
 	}
-
+	var row sql.Result
 	// 执行sql语句
-	row, err := utils.DbConn.Exec(cond, values...)
+	if tx != nil {
+		row, err = tx.Exec(cond, values...)
+	} else {
+		row, err = utils.DbConn.Exec(cond, values...)
+	}
 	if err != nil {
 		logger.Log.Error("数据库插入错误", zap.Error(err))
 		return errmsg.ErrorMysql, -1

@@ -4,6 +4,7 @@ import (
 	qb "github.com/didi/gendry/builder"
 	"github.com/didi/gendry/scanner"
 	"go.uber.org/zap"
+	"service/model"
 	"service/utils"
 	"service/utils/errmsg"
 	"service/utils/logger"
@@ -85,4 +86,36 @@ func ModifyAdvisorStatus(id int64, newStatus int) int {
 		return errmsg.ErrorMysql
 	}
 	return errmsg.SUCCESS
+}
+
+func NewAdvisorAndOrder(data *model.Login) (int, int64) {
+	var code int
+	var id int64
+	begin, err := utils.DbConn.Begin()
+	if err != nil {
+		_ = begin.Rollback()
+		logger.Log.Error("事务创建失败", zap.Error(err))
+		return errmsg.ErrorSqlTransError, -1
+	}
+	code, id = NewUser(ADVISORTABLE, data, begin)
+	if code != errmsg.SUCCESS {
+		// 创建顾问失败
+		_ = begin.Rollback()
+		logger.Log.Warn("顾问数据创建错误,事务回滚")
+		return errmsg.ErrorSqlTransError, -1
+	}
+	code = NewService(id, begin)
+	if code != errmsg.SUCCESS {
+		// 顾问的服务项创建失败
+		_ = begin.Rollback()
+		logger.Log.Warn("顾问服务创建失败，事务回滚")
+		return errmsg.ErrorSqlTransError, -1
+	}
+	err = begin.Commit()
+	if err != nil {
+		_ = begin.Rollback()
+		logger.Log.Error("事务提交失败", zap.Error(err))
+		return errmsg.ErrorSqlTransCommitError, -1
+	}
+	return errmsg.SUCCESS, id
 }

@@ -17,11 +17,13 @@ const (
 	ErrorPhoneInput      = 1007
 	ErrorAdvisorNotExist = 1008
 	// 服务器内部错误,SQL编译等
-	ErrorSqlBuild     = 2001
-	ErrorMysql        = 2002
-	ErrorNotImplement = 2003
-	ErrorGinBind      = 2004
-	ErrorSqlScanner   = 2005
+	ErrorSqlBuild            = 2001
+	ErrorMysql               = 2002
+	ErrorNotImplement        = 2003
+	ErrorGinBind             = 2004
+	ErrorSqlScanner          = 2005
+	ErrorSqlTransError       = 2006
+	ErrorSqlTransCommitError = 2007
 	// TOKEN相关错误
 	ErrorTokenNotExist     = 3001
 	ErrorTokenTimeOut      = 3002
@@ -50,11 +52,13 @@ var errMsg = map[int]string{
 	ErrorUpdateValid:     "不允许直接更新Coin或密码字段",
 	ErrorPhoneInput:      "手机号字段请传字符串,会被识别成float64",
 	//服务器内部错误
-	ErrorSqlBuild:     "gendry库SQL编译错误",
-	ErrorMysql:        "数据库操作错误",
-	ErrorNotImplement: "接口未开发",
-	ErrorGinBind:      "gin框架绑定数据错误,请确认数据格式",
-	ErrorSqlScanner:   "gendry库scanner绑定数据格式错误",
+	ErrorSqlBuild:            "gendry库SQL编译错误",
+	ErrorMysql:               "数据库操作错误",
+	ErrorNotImplement:        "接口未开发",
+	ErrorGinBind:             "gin框架绑定数据错误,请确认数据格式",
+	ErrorSqlScanner:          "gendry库scanner绑定数据格式错误",
+	ErrorSqlTransError:       "MySQL事务创建错误",
+	ErrorSqlTransCommitError: "MySQL事务提交失败",
 	// TOKEN相关错误
 	ErrorTokenNotExist:     "TOKEN不存在",
 	ErrorTokenTimeOut:      "TOKEN超时",

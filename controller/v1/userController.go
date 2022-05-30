@@ -4,15 +4,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"reflect"
+	"service/model"
 	"service/service"
 	"service/utils/errmsg"
 	"service/utils/logger"
 	"service/utils/validator"
 )
 
-func NewUser(ctx *gin.Context) {
-	NewUserOrAdvisor(service.USERTABLE, ctx)
-}
+//func NewUser(ctx *gin.Context) {
+//	NewUser(service.USERTABLE, ctx)
+//}
 
 func UpdateUserInfoController(ctx *gin.Context) {
 	// 前端传什么后端就更新什么
@@ -22,7 +23,7 @@ func UpdateUserInfoController(ctx *gin.Context) {
 	// 数据绑定
 	err := ctx.ShouldBindJSON(&data)
 	if err != nil {
-		GinBindError(ctx, err, "UpdateUserInfoController", &data)
+		ginBindError(ctx, err, "UpdateUserInfoController", &data)
 		return
 	}
 	// 数据校验 将不同的字段绑定到不同的校验函数中，使用反射做校验
@@ -62,6 +63,36 @@ func UpdateUserInfoController(ctx *gin.Context) {
 	// 更新
 	code = service.Update(service.USERTABLE, data)
 	commonReturn(ctx, code, "", data)
+	return
+}
+func NewUser(ctx *gin.Context) {
+	var table = service.USERTABLE
+	var data model.Login
+	// 数据绑定
+	err := ctx.ShouldBindJSON(&data)
+	if err != nil {
+		ginBindError(ctx, err, "NewUser", data)
+		return
+	}
+	// 数据校验
+	msg, code := validator.Validate(data)
+	// 数据不合法
+	if code != errmsg.SUCCESS {
+		logger.Log.Warn("数据校验非法", zap.Error(err))
+		commonReturn(ctx, code, msg, data)
+		return
+	}
+	// TODO 顾问创建和顾问的服务创建用事务
+	// 调用service层 检查手机号是否重复
+	code = service.CheckPhoneExist(table, data.Phone)
+	if code == errmsg.SUCCESS {
+		// 用户密码加密存储
+		data.Password = service.GetPwd(data.Password)
+		code, data.Id = service.NewUser(table, &data, nil)
+		logger.Log.Info("新增用户", zap.String("phone", data.Phone))
+	}
+	// success
+	commonReturn(ctx, code, msg, &data)
 	return
 }
 

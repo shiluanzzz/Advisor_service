@@ -13,7 +13,38 @@ import (
 )
 
 func NewAdvisorController(ctx *gin.Context) {
-	NewUserOrAdvisor(service.ADVISORTABLE, ctx)
+	var table = service.ADVISORTABLE
+	var data model.Login
+	// 数据绑定
+	err := ctx.ShouldBindJSON(&data)
+	if err != nil {
+		ginBindError(ctx, err, "NewUser", data)
+		return
+	}
+	// 数据校验
+	msg, code := validator.Validate(data)
+	// 数据不合法
+	if code != errmsg.SUCCESS {
+		logger.Log.Warn("数据校验非法", zap.Error(err))
+		commonReturn(ctx, code, msg, data)
+		return
+	}
+	// 调用service层 检查手机号是否重复
+	code = service.CheckPhoneExist(table, data.Phone)
+	if code == errmsg.SUCCESS {
+		// 用户密码加密存储
+		data.Password = service.GetPwd(data.Password)
+		// 顾问的创建和服务的创建使用事务统一提交
+		code, id := service.NewAdvisorAndOrder(&data)
+		if code == errmsg.SUCCESS {
+			data.Id = id
+		} else {
+			data.Id = -1
+		}
+	}
+	// success
+	commonReturn(ctx, code, msg, &data)
+	return
 }
 func UpdateAdvisorController(ctx *gin.Context) {
 
@@ -23,7 +54,7 @@ func UpdateAdvisorController(ctx *gin.Context) {
 	// 数据绑定
 	err := ctx.ShouldBindJSON(&data)
 	if err != nil {
-		GinBindError(ctx, err, "UpdateAdvisorController", data)
+		ginBindError(ctx, err, "UpdateAdvisorController", data)
 		return
 	}
 	// 数据校验 将不同的字段绑定到不同的校验函数中，使用反射做校验
@@ -99,7 +130,7 @@ func GetAdvisorInfo(ctx *gin.Context) {
 	var data Num
 	err := ctx.ShouldBindQuery(&data)
 	if err != nil {
-		GinBindError(ctx, err, "GetAdvisorInfo", data)
+		ginBindError(ctx, err, "GetAdvisorInfo", data)
 	}
 	code, res := service.GetAdvisorInfo(data.Id)
 
@@ -125,7 +156,7 @@ func ModifyAdvisorStatus(ctx *gin.Context) {
 		"status": newStatus.Status,
 	}
 	if err != nil {
-		GinBindError(ctx, err, "ModifyAdvisorStatus", returnData)
+		ginBindError(ctx, err, "ModifyAdvisorStatus", returnData)
 		return
 	}
 	msg, code := validator.Validate(newStatus)

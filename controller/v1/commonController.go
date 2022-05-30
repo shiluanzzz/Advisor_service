@@ -16,6 +16,7 @@ import (
 	"unicode"
 )
 
+// 统一的gin 数据返回格式
 func commonReturn(ctx *gin.Context, code int, msg string, data interface{}) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"msg":  errmsg.GetErrMsg(code) + " " + msg,
@@ -24,46 +25,14 @@ func commonReturn(ctx *gin.Context, code int, msg string, data interface{}) {
 	})
 	return
 }
-func GinBindError(ctx *gin.Context, err error, funcName string, data interface{}) {
+
+// ginBindError gin绑定数据的error 返回
+func ginBindError(ctx *gin.Context, err error, funcName string, data interface{}) {
 	code := errmsg.ErrorGinBind
 	logger.Log.Error("gin绑定json错误", zap.Error(err), zap.String("function", funcName))
 	commonReturn(ctx, code, "", data)
 	return
 
-}
-func NewUserOrAdvisor(table string, ctx *gin.Context) {
-	var data model.Login
-	// 数据绑定
-	err := ctx.ShouldBindJSON(&data)
-	if err != nil {
-		GinBindError(ctx, err, "NewUserOrAdvisor", data)
-		return
-	}
-	// 数据校验
-	msg, code := validator.Validate(data)
-	// 数据不合法
-	if code != errmsg.SUCCESS {
-		logger.Log.Warn("数据校验非法", zap.Error(err))
-		commonReturn(ctx, code, msg, data)
-		return
-	}
-	// TODO 顾问创建和顾问的服务创建用事务
-	// 调用service层 检查手机号是否重复
-	code = service.CheckPhoneExist(table, data.Phone)
-	if code == errmsg.SUCCESS {
-		// 用户密码加密存储
-		data.Password = service.GetPwd(data.Password)
-		code, data.Id = service.NewUser(table, &data)
-		logger.Log.Info("新增用户", zap.String("phone", data.Phone))
-		// 如果是顾问 在为顾问创建一次服务
-		if table == service.ADVISORTABLE {
-			// TODO
-			code = service.NewService(data.Id)
-		}
-	}
-	// success
-	commonReturn(ctx, code, msg, &data)
-	return
 }
 
 // Login 用户或者顾问登录
@@ -72,7 +41,7 @@ func Login(table string, ctx *gin.Context) {
 	err := ctx.ShouldBindQuery(&data)
 	// 数据绑定错误
 	if err != nil {
-		GinBindError(ctx, err, "Login", &data)
+		ginBindError(ctx, err, "Login", &data)
 		return
 	}
 

@@ -20,6 +20,7 @@ func InitDB() {
 		manager.SetTimeout(1*time.Second),
 		manager.SetReadTimeout(1*time.Second),
 	).Port(DbPort).Open(true)
+	DbConn.SetConnMaxLifetime(600 * time.Second)
 	if err != nil {
 		log.Fatalln("database connect error!", err)
 	}
