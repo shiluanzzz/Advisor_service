@@ -31,7 +31,8 @@ func GetAdvisorInfo(Id int64) (int, []map[string]interface{}) {
 	}
 	res, err := scanner.ScanMapDecodeClose(row)
 	if err != nil {
-		logger.Log.Error("gendry scanner赋值出错", zap.Error(err))
+		logger.GendryScannerError("GetAdvisorInfor", err)
+		return errmsg.ErrorSqlScanner, nil
 	}
 	if res == nil {
 		return errmsg.ErrorAdvisorNotExist, nil
@@ -50,7 +51,7 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	}
 	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {
-		logger.GendryError("GetAdvisorList", err)
+		logger.GendryBuildError("GetAdvisorList", err)
 		return errmsg.ErrorSqlBuild, nil
 	}
 	rows, err := utils.DbConn.Query(cond, values...)
@@ -60,7 +61,7 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	}
 	res, err := scanner.ScanMapDecodeClose(rows)
 	if err != nil {
-		logger.GendryError("GetAdvisorList", err)
+		logger.GendryScannerError("GetAdvisorList", err)
 		return errmsg.ErrorSqlBuild, nil
 	}
 	return errmsg.SUCCESS, res
@@ -75,7 +76,7 @@ func ModifyAdvisorStatus(id int64, newStatus int) int {
 	}
 	cond, values, err := qb.BuildUpdate(ADVISORTABLE, where, updates)
 	if err != nil {
-		logger.GendryError("ModifyAdvisorStatus", err)
+		logger.GendryBuildError("ModifyAdvisorStatus", err)
 		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)

@@ -70,7 +70,6 @@ func NewUserOrAdvisor(table string, ctx *gin.Context) {
 func Login(table string, ctx *gin.Context) {
 	var data model.Login
 	err := ctx.ShouldBindQuery(&data)
-	fmt.Println(data)
 	// 数据绑定错误
 	if err != nil {
 		GinBindError(ctx, err, "Login", &data)
@@ -126,7 +125,6 @@ func UpdatePwdControl(table string, ctx *gin.Context) {
 
 func Case2CamelCase(str string) string {
 	str = strings.Replace(str, "_", " ", -1)
-	// TODO
 	str = strings.Title(str)
 	str = strings.Replace(str, " ", "", -1)
 	return LowFirst(str)

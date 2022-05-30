@@ -49,9 +49,7 @@ func Birth(value interface{}) (errMsg string, errCode int) {
 	return Validate(t{Birth: value.(string)})
 }
 
-// TODO 失效
 func Gender(value interface{}) (errMsg string, errCode int) {
-	fmt.Println(value)
 	type t struct {
 		Gender string `validate:"required,oneof=Female Male 'Not Specified'"`
 	}

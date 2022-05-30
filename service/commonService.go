@@ -4,6 +4,7 @@ package service
 import (
 	"database/sql"
 	qb "github.com/didi/gendry/builder"
+	"github.com/didi/gendry/scanner"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"service/utils"
@@ -11,7 +12,7 @@ import (
 	"service/utils/logger"
 )
 
-var TABLES = []string{SERVICETABLE, USERTABLE}
+var TABLES = []string{ADVISORTABLE, USERTABLE}
 
 // CheckPhoneExist 检查手机号是否重复 true=已经存在 false=不存在
 func CheckPhoneExist(tableName string, phone interface{}) int {
@@ -22,7 +23,7 @@ func CheckPhoneExist(tableName string, phone interface{}) int {
 	selectFields := []string{"phone"}
 	cond, values, err := qb.BuildSelect(tableName, where, selectFields)
 	if err != nil {
-		logger.GendryError("CheckPhoneExist", err)
+		logger.GendryBuildError("CheckPhoneExist", err)
 		return errmsg.ErrorSqlBuild
 	}
 	// 查询
@@ -32,12 +33,15 @@ func CheckPhoneExist(tableName string, phone interface{}) int {
 		return errmsg.ErrorMysql
 	}
 	// 判断是否存在重复key
-	var flag = false
-	for rows.Next() {
-		flag = true
-		break
+	res, err := scanner.ScanMapDecodeClose(rows)
+	if err != nil {
+		if err == scanner.ErrNilRows {
+			return errmsg.SUCCESS
+		}
+		logger.GendryScannerError("CheckPhoneExist", err)
+		return errmsg.ErrorSqlScanner
 	}
-	if flag {
+	if len(res) != 0 {
 		return errmsg.ErrorUserphoneUsed
 	} else {
 		return errmsg.SUCCESS
@@ -58,7 +62,7 @@ func ChangePWD(tableName string, id int64, newPwd string) int {
 	// 构造sql 执行更新
 	cond, values, err := qb.BuildUpdate(tableName, where, updates)
 	if err != nil {
-		logger.GendryError("ChangePWD", err)
+		logger.GendryBuildError("ChangePWD", err)
 		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
@@ -80,7 +84,7 @@ func GetPwd(pwd string) string {
 }
 
 // checkPwd 检查用户输入的密码和数据库中加密的密码是否一致
-// checkPwd pwd:用户输入的密码 encryptPwd 数据库中加密的密码
+// pwd:用户输入的密码 encryptPwd 数据库中加密的密码
 func checkPwd(pwd string, encryptPwd string) int {
 	err := bcrypt.CompareHashAndPassword([]byte(encryptPwd), []byte(pwd))
 	if err != nil {
@@ -100,7 +104,7 @@ func CheckRolePwd(table string, id int64, pwd string) int {
 	selectFiled := []string{"password"}
 	cond, value, err := qb.BuildSelect(table, where, selectFiled)
 	if err != nil {
-		logger.GendryError("CheckRolePwd", err)
+		logger.GendryBuildError("CheckRolePwd", err)
 		return errmsg.ErrorSqlBuild
 	}
 	rows := utils.DbConn.QueryRow(cond, value...)

@@ -34,7 +34,9 @@ func init() {
 	core := zapcore.NewTee(infoCore, errorCore, warnCore)
 	Log = zap.New(core, zap.AddCaller())
 	// logger会有缓存因此退出的时候需要同步
-	defer Log.Sync()
+	defer func() {
+		_ = Log.Sync()
+	}()
 }
 func getLogEncoder() zapcore.Encoder {
 	// TODO 两种config有什么区别?
@@ -68,8 +70,11 @@ func getLogWriter(filepath string) zapcore.WriteSyncer {
 }
 
 // common log TODO:显示上一层的调用
-func GendryError(funcName string, err error) {
-	Log.Error("Gendry错误", zap.Error(err), zap.String("function", funcName))
+func GendryBuildError(funcName string, err error) {
+	Log.Error("Gendry build SQL错误", zap.String("function", funcName), zap.Error(err))
+}
+func GendryScannerError(funcName string, err error) {
+	Log.Error("Gendry scanner 绑定数据错误", zap.String("function", funcName), zap.Error(err))
 }
 func SqlError(funcName string, kind string, err error) {
 	Log.Error(fmt.Sprintf("mysql %s error", kind), zap.Error(err), zap.String("function", funcName))

@@ -29,7 +29,7 @@ func NewService(advisorId int64) int {
 	}
 	cond, values, err := qb.BuildInsert(SERVICETABLE, data)
 	if err != nil {
-		logger.GendryError("NewService", err)
+		logger.GendryBuildError("NewService", err)
 		return errmsg.ErrorSqlBuild
 	}
 	// 执行sql语句
@@ -52,7 +52,7 @@ func ModifyServicePrice(advisorId int64, serviceId int, price float32) int {
 	}
 	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
-		logger.GendryError("ModifyServicePrice", err)
+		logger.GendryBuildError("ModifyServicePrice", err)
 		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
@@ -74,7 +74,7 @@ func ModifyServiceStatus(advisorId int64, serviceId int, newStatus int) int {
 	}
 	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
-		logger.GendryError("ModifyServiceStatus", err)
+		logger.GendryBuildError("ModifyServiceStatus", err)
 		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
@@ -93,7 +93,7 @@ func GetAdvisorService(id int64) (int, []map[string]interface{}) {
 	selects := []string{"service_name", "service_id", "price"}
 	cond, values, err := qb.BuildSelect(SERVICETABLE, where, selects)
 	if err != nil {
-		logger.GendryError("GetAdvisorService", err)
+		logger.GendryBuildError("GetAdvisorService", err)
 		return errmsg.ErrorSqlBuild, nil
 	}
 	rows, err := utils.DbConn.Query(cond, values...)
@@ -103,7 +103,7 @@ func GetAdvisorService(id int64) (int, []map[string]interface{}) {
 	}
 	res, err := scanner.ScanMapDecodeClose(rows)
 	if err != nil {
-		logger.GendryError("GetAdvisorService", err)
+		logger.GendryBuildError("GetAdvisorService", err)
 		return errmsg.ErrorSqlBuild, nil
 	}
 	return errmsg.SUCCESS, res

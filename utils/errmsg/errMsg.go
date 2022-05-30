@@ -21,6 +21,7 @@ const (
 	ErrorMysql        = 2002
 	ErrorNotImplement = 2003
 	ErrorGinBind      = 2004
+	ErrorSqlScanner   = 2005
 	// TOKEN相关错误
 	ErrorTokenNotExist     = 3001
 	ErrorTokenTimeOut      = 3002
@@ -52,7 +53,8 @@ var errMsg = map[int]string{
 	ErrorSqlBuild:     "gendry库SQL编译错误",
 	ErrorMysql:        "数据库操作错误",
 	ErrorNotImplement: "接口未开发",
-	ErrorGinBind:      "gin框架绑定数据错误",
+	ErrorGinBind:      "gin框架绑定数据错误,请确认数据格式",
+	ErrorSqlScanner:   "gendry库scanner绑定数据格式错误",
 	// TOKEN相关错误
 	ErrorTokenNotExist:     "TOKEN不存在",
 	ErrorTokenTimeOut:      "TOKEN超时",
