@@ -11,10 +11,6 @@ type Service struct {
 	Status        int     `structs:"status" json:"status" validate:"required,number,gte=0,lte=1"`
 }
 
-//type ServiceKind struct {
-//	Name string `structs:"name" json:"name" validate:"require"`
-//	Id   int    `structs:"id" json:"id"`
-//}
 type ServiceState struct {
 	Status int `structs:"status" form:"status" validate:"required,number,min=0,max=1"`
 }

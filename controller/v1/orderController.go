@@ -97,7 +97,7 @@ func GetOrderListController(ctx *gin.Context) {
 		v["show_time"] = time.Unix(v["create_time"].(int64), 0).Format("Jan 02,2006")
 		_, v["service_name_id"] = service.GetTableItem(service.SERVICETABLE, v["service_id"].(int64), "service_name_id")
 		_, v["service_name"] = model.GetServiceNameById(int(v["service_name_id"].(int64)))
-		v["status_name"] = model.GetStatusNameByCode(int(v["status"].(int64)))
+		v["status_name"] = model.GetOrderStatusNameByCode(int(v["status"].(int64)))
 	}
 	commonReturn(ctx, code, "", TransformDataSlice(data))
 	return

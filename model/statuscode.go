@@ -16,7 +16,7 @@ var statusName = map[int]string{
 	Completed: "Completed",
 }
 
-func GetStatusNameByCode(id int) string {
+func GetOrderStatusNameByCode(id int) string {
 	if statusName[id] != "" {
 		return statusName[id]
 	} else {
