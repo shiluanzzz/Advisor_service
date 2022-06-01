@@ -3,6 +3,7 @@ package service
 // 一些user、advisor都会用到的service接口 例如密码、手机号码重复校验等。
 import (
 	"database/sql"
+	"fmt"
 	qb "github.com/didi/gendry/builder"
 	"github.com/didi/gendry/scanner"
 	"go.uber.org/zap"
@@ -162,4 +163,61 @@ func CheckIdExist(id int64, table string) int {
 	} else {
 		return code
 	}
+}
+
+func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.Tx) (int, interface{}) {
+	where := map[string]interface{}{
+		"id": tableId,
+	}
+	selects := []string{fieldName}
+	cond, values, err := qb.BuildSelect(tableName, where, selects)
+	if err != nil {
+		logger.GendryBuildError("GetTableItem", err)
+		return errmsg.ErrorSqlBuild, nil
+	}
+	var res interface{}
+	var row *sql.Row
+	if len(tx) != 0 {
+		row = tx[0].QueryRow(cond, values...)
+	} else {
+		row = utils.DbConn.QueryRow(cond, values...)
+	}
+	err = row.Scan(&res)
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("无法从表%s根据%d匹配到%s字段,请检查。", tableName, tableId, fieldName), zap.Error(err))
+		return errmsg.ErrorMysql, nil
+	}
+	return errmsg.SUCCESS, res
+}
+
+// UpdateTableItem 单项更新表值，传入表名，表id，map，tx为事务可选
+func UpdateTableItem(tableName string, tableId int64, updates map[string]interface{}, tx ...*sql.Tx) int {
+	where := map[string]interface{}{
+		"id": tableId,
+	}
+	cond, values, err := qb.BuildUpdate(tableName, where, updates)
+	if err != nil {
+		logger.GendryBuildError("UpdateTableItem", err)
+		return errmsg.ErrorSqlBuild
+	}
+	var res sql.Result
+	if len(tx) != 0 {
+		res, err = tx[0].Exec(cond, values...)
+	} else {
+		res, err = utils.DbConn.Exec(cond, values...)
+	}
+	if err != nil {
+		logger.Log.Error("通用service接口更新参数值失败", zap.Error(err), zap.String("cond", cond), zap.String("values", fmt.Sprintf("%v", values)))
+		return errmsg.ErrorMysql
+	}
+	affectRow, err := res.RowsAffected()
+	if err != nil {
+		logger.Log.Error("获取res.RowsAffected()失败", zap.Error(err))
+		return errmsg.ErrorMysql
+	}
+	if affectRow != 1 {
+		logger.Log.Error(errmsg.GetErrMsg(errmsg.ErrorAffectsNotOne), zap.String("id", fmt.Sprintf("%v", tableId)), zap.String("table", tableName))
+		return errmsg.ErrorAffectsNotOne
+	}
+	return errmsg.SUCCESS
 }
