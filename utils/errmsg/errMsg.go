@@ -8,7 +8,7 @@ const (
 	ERROR   = 400
 	// 用户错误状态码
 	ErrorUserphoneUsed  = 1001
-	ErrorPasswordWoron  = 1002
+	ErrorPasswordWrong  = 1002
 	ErrorUserNotExist   = 1003
 	ErrorUsernameModify = 1004
 
@@ -65,7 +65,7 @@ var errMsg = map[int]string{
 	ERROR:   "错误",
 	// user
 	ErrorUserphoneUsed:   "手机号已注册！",
-	ErrorPasswordWoron:   "密码错误",
+	ErrorPasswordWrong:   "密码错误",
 	ErrorUserNotExist:    "用户不存在",
 	ErrorAdvisorNotExist: "顾问不存在",
 	ErrorUsernameModify:  "不允许修改用户名!",

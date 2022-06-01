@@ -89,7 +89,7 @@ func GetPwd(pwd string) string {
 func checkPwd(pwd string, encryptPwd string) int {
 	err := bcrypt.CompareHashAndPassword([]byte(encryptPwd), []byte(pwd))
 	if err != nil {
-		return errmsg.ErrorPasswordWoron
+		return errmsg.ErrorPasswordWrong
 	}
 	return errmsg.SUCCESS
 }
@@ -116,7 +116,7 @@ func CheckRolePwd(table string, id int64, pwd string) int {
 			return errmsg.ErrorUserNotExist
 		} else {
 			logger.SqlError("CheckRolePwd", "select", err)
-			return errmsg.ErrorPasswordWoron
+			return errmsg.ErrorPasswordWrong
 		}
 	}
 	// 查到了加密密码在比对
@@ -158,7 +158,7 @@ func CheckIdExist(id int64, table string) int {
 	code := CheckRolePwd(table, id, "")
 	if code == errmsg.ErrorUserNotExist {
 		return errmsg.ErrorTokenIdNotExist
-	} else if code == errmsg.ErrorPasswordWoron {
+	} else if code == errmsg.ErrorPasswordWrong {
 		return errmsg.SUCCESS
 	} else {
 		return code
