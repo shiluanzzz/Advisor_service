@@ -10,5 +10,4 @@ func main() {
 	routes.InitRouter()
 	defer utils.DbConn.Close()
 	//_, res := service.GetAdvisorService("17607175592")
-	//fmt.Println(res)
 }

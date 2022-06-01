@@ -39,6 +39,15 @@ func InitRouter() {
 		Service.POST("/status", v1.ModifyServiceStatus)
 		Service.POST("/price", v1.ModifyServicePrice)
 	}
+	order := r.Group("order")
+	order.Use(middleware.JwtToken())
+	{
+		order.POST("/add", v1.NewOrderController)
+		order.GET("/list", v1.GetOrderListController)
+		order.POST("/reply", v1.OrderReplyController)
+		order.POST("/rush", v1.RushOrderController)
+		order.GET("/detail/:id", v1.GetOrderDetailController)
+	}
 	logger.Log.Info("服务启动")
 	err := r.Run(utils.HttpPort)
 	if err != nil {

@@ -69,13 +69,33 @@ func getLogWriter(filepath string) zapcore.WriteSyncer {
 	})
 }
 
-// common log TODO:显示上一层的调用
-func GendryBuildError(funcName string, err error) {
-	Log.Error("Gendry build SQL错误", zap.String("function", funcName), zap.Error(err))
+func GendryBuildError(funcName string, err error, args ...interface{}) {
+	fields := []zapcore.Field{
+		zap.String("function", funcName),
+		zap.Error(err),
+	}
+	for i := 0; i < len(args)-1; i += 2 {
+		fields = append(fields, zap.String(fmt.Sprintf("%v", args[i]), fmt.Sprintf("%v", args[i+1])))
+	}
+	Log.Error("Gendry build SQL错误", fields...)
 }
-func GendryScannerError(funcName string, err error) {
-	Log.Error("Gendry scanner 绑定数据错误", zap.String("function", funcName), zap.Error(err))
+func GendryScannerError(funcName string, err error, args ...interface{}) {
+	fields := []zapcore.Field{
+		zap.String("function", funcName),
+		zap.Error(err),
+	}
+	for i := 0; i < len(args)-1; i += 2 {
+		fields = append(fields, zap.String(fmt.Sprintf("%v", args[i]), fmt.Sprintf("%v", args[i+1])))
+	}
+	Log.Error("Gendry scanner 绑定数据错误", fields...)
 }
-func SqlError(funcName string, kind string, err error) {
-	Log.Error(fmt.Sprintf("mysql %s error", kind), zap.Error(err), zap.String("function", funcName))
+func SqlError(funcName string, kind string, err error, args ...interface{}) {
+	fields := []zapcore.Field{
+		zap.String("function", funcName),
+		zap.Error(err),
+	}
+	for i := 0; i < len(args)-1; i += 2 {
+		fields = append(fields, zap.String(fmt.Sprintf("%v", args[i]), fmt.Sprintf("%v", args[i+1])))
+	}
+	Log.Error(fmt.Sprintf("mysql %s error", kind), fields...)
 }

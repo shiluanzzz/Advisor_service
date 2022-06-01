@@ -1,0 +1,33 @@
+package model
+
+type Order struct {
+	Id         int64   `structs:"id" json:"id"`
+	UserId     int64   `structs:"user_id" json:"userId" validate:"required,number"`
+	ServiceId  int64   `structs:"service_id" json:"serviceId" validate:"required,number"`
+	AdvisorId  int64   `structs:"advisor_id" json:"advisorId" validate:"required,number"`
+	Coin       float32 `structs:"coin" json:"coin" validate:""`
+	RushCoin   float32 `structs:"rush_coin" json:"rushCoin"`
+	Situation  string  `structs:"situation" json:"situation" validate:"max=3000"`
+	Question   string  `structs:"question" json:"question" validate:"max=200"`
+	CreateTime int64   `structs:"create_time" json:"createTime"`
+	Reply      string  `structs:"reply" json:"reply" validate:""`
+	Rate       float32 `structs:"rate" json:"rate" validate:""`
+	Comment    string  `structs:"comment" json:"comments" validate:""`
+	Status     int     `structs:"status"`
+}
+
+type OrderReply struct {
+	Id        int64   `structs:"id" json:"orderId" validate:"min=1"`
+	AdvisorId int64   `structs:"advisor_id" json:"advisorId"`
+	Reply     string  `structs:"reply" json:"reply" validate:"min=1200,max=5000"`
+	Coin      float32 `structs:"coin" json:"coin" validate:""`
+	RushCoin  float32
+	Status    int64
+}
+type OrderRush struct {
+	Id       int64 `struct:"id" json:"orderId" validate:"min=1"`
+	UserId   int64 `struct:"user_id"`
+	RushTime int64
+	CronId   int
+	Status   int64
+}
