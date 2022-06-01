@@ -13,7 +13,7 @@ import (
 	"service/utils/logger"
 )
 
-const ORDERTABLE = "user_order"
+var ORDERTABLE = "user_order"
 
 func NewOrderAndCostTrans(model *model.Order) (int, int64) {
 	begin, err := utils.DbConn.Begin()
@@ -363,6 +363,16 @@ func RushOrderTrans(data *model.OrderRush) int {
 		_ = begin.Rollback()
 		return code
 	}
+	// 把rush_time提交到表里面去
+	code = UpdateTableItem(ORDERTABLE, data.Id, map[string]interface{}{
+		"rush_time": data.RushTime,
+	}, begin)
+	if code != errmsg.SUCCESS {
+		_ = begin.Rollback()
+		return code
+	}
+
+	// 事务结束 commit.
 	err = begin.Commit()
 	if err != nil {
 		_ = begin.Rollback()
@@ -379,42 +389,46 @@ func RushOrder(id int64) int {
 }
 
 // ChangeOrderStatus 修改订单状态 加急->普通,普通->过期
-func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStatus int) int {
+func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStatus int) (code int) {
 	begin, err := utils.DbConn.Begin()
+	//  defer在函数返回后统一判断事务是否需要回滚
+	defer func() {
+		if code != errmsg.SUCCESS {
+			err = begin.Rollback()
+			logger.Log.Error("事务回滚失败!", zap.Error(err))
+		}
+	}()
+
 	if err != nil {
-		_ = begin.Rollback()
-		return errmsg.ErrorSqlTransError
+		code = errmsg.ErrorSqlTransError
+		return code
 	}
 	// 获取原始状态
 	code, statusInSQL := GetTableItem(ORDERTABLE, orderId, "status", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	// 订单已经完成了 这个状态转移也就结束了，也不需要为用户退回金币
 	if int(statusInSQL.(int64)) == model.Completed {
-		_ = begin.Rollback()
-		return errmsg.ErrorOrderHasCompleted
+		code = errmsg.ErrorOrderHasCompleted
+		return code
 	}
-	// 订单与预期状态不符合 TODO?
-	if int(statusInSQL.(int64)) != originStatus {
-		_ = begin.Rollback()
-		return errmsg.ErrorJobStatusNotExpect
+	// 加急订单恢复pending状态下，如果被提前标记为expired，可以不用往下执行了.
+	if int(statusInSQL.(int64)) == model.Expired {
+		code = errmsg.ErrorOrderHasCompleted
+		return code
 	}
 	// 退回金币的逻辑
 	code, orderMoney := GetTableItem(ORDERTABLE, orderId, "coin", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	code, orderRushMoney := GetTableItem(ORDERTABLE, orderId, "rush_coin", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	code, userMoney := GetTableItem(USERTABLE, userId, "coin", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	// 用户的金币增加逻辑
@@ -423,19 +437,22 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStat
 		// 加急到普通
 		endCoin += orderRushMoney.(float32)
 	} else if originStatus == model.Pending && targetStatus == model.Expired {
-		// 加急到过期
-		endCoin += orderRushMoney.(float32)
-		endCoin += orderMoney.(float32)
-	} else if originStatus == model.Pending && targetStatus == model.Expired {
 		// 普通到过期
 		endCoin += orderMoney.(float32)
+		// 如果订单是在加急的状态下，也要把钱退回去。
+		if int(statusInSQL.(int64)) == model.Rush {
+			endCoin += orderRushMoney.(float32)
+		}
+	} else {
+		code = errmsg.ErrorJobStatusConvert
+		return code
 	}
+
 	// 提交用户的金币修改
 	code = UpdateTableItem(USERTABLE, userId, map[string]interface{}{
 		"coin": endCoin,
 	}, begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	// 提交状态修改
@@ -443,14 +460,13 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStat
 		"status": targetStatus,
 	}, begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	// 提交事务
 	err = begin.Commit()
 	if err != nil {
-		_ = begin.Rollback()
-		return errmsg.ErrorSqlTransCommitError
+		code = errmsg.ErrorSqlTransCommitError
+		return code
 	}
 	return errmsg.SUCCESS
 }

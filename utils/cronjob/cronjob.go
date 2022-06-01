@@ -1,10 +1,12 @@
 package cronjob
 
 import (
+	"fmt"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"service/model"
 	"service/service"
+	"service/utils"
 	"service/utils/errmsg"
 	"service/utils/logger"
 	"time"
@@ -12,22 +14,43 @@ import (
 
 // CronJob 定时job主体
 type CronJob struct {
-	OrderId  int64
-	UserId   int64
-	RushTime int64
-	CronId   int
+	OrderId    int64
+	UserId     int64
+	RushTime   int64
+	CreateTime int64
+	CronId     int
+	// CronType=0 rush->pending =1:pending->expired
+	CronType int
 }
+
+const (
+	RushOrderType = iota
+	PendingOrderType
+)
 
 // Run 定时任务的运行逻辑
 func (order *CronJob) Run() {
 	now := time.Now().Unix()
-	if now-order.RushTime > 60 {
-		code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Rush, model.Pending)
-		// 这个订单被顾问回答了 或者执行成功了
-		if code == errmsg.ErrorOrderHasCompleted || code == errmsg.SUCCESS {
-			CloseJob(order)
-		} else {
-			logger.Log.Error("定时任务执行失败,", zap.String("errmsg", errmsg.GetErrMsg(code)))
+	// 隔1分钟扫描一次
+	switch order.CronType {
+	case RushOrderType:
+		if now-order.RushTime > utils.RushOrder2PendingTime*60 {
+			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Rush, model.Pending)
+			// 这个订单被顾问回答了 或者执行成功了
+			if code == errmsg.ErrorOrderHasCompleted || code == errmsg.SUCCESS {
+				CloseJob(order)
+			} else {
+				logger.Log.Error("定时任务0执行失败,", zap.String("errmsg", errmsg.GetErrMsg(code)))
+			}
+		}
+	case PendingOrderType:
+		if now-order.CreateTime > 60*60*24 {
+			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Pending, model.Expired)
+			if code == errmsg.SUCCESS {
+				CloseJob(order)
+			} else {
+				logger.Log.Error("定时任务1执行失败,", zap.String("errmsg", errmsg.GetErrMsg(code)))
+			}
 		}
 	}
 }
@@ -47,13 +70,14 @@ func init() {
 }
 func AddJob(job *CronJob) int {
 	jobId, err := C.AddJob("@every 1m", job)
+	logMsg := fmt.Sprintf("创建定时任务%d成功", job.CronType)
 	if err != nil {
-		logger.Log.Error("创建定时任务失败", zap.Error(err))
+		logger.Log.Error(logMsg, zap.Error(err))
 		return errmsg.ErrorCronAddJob
 	} else {
 		job.CronId = int(jobId)
 		jobMap[int(jobId)] = job
-		logger.Log.Info("创建定时任务成功", zap.Int("cronId", job.CronId))
+		logger.Log.Info(logMsg, zap.Int("cronId", job.CronId))
 		return errmsg.SUCCESS
 	}
 }

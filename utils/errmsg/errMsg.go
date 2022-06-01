@@ -57,6 +57,7 @@ const (
 	// Cron相关
 	ErrorCronAddJob         = 6001
 	ErrorJobStatusNotExpect = 6002
+	ErrorJobStatusConvert   = 6003
 )
 
 var errMsg = map[int]string{
@@ -108,6 +109,7 @@ var errMsg = map[int]string{
 	//定时任务相关
 	ErrorCronAddJob:         "cron创建定时任务失败",
 	ErrorJobStatusNotExpect: "任务与预期状态不符合",
+	ErrorJobStatusConvert:   "订单状态转化不符合预期",
 }
 
 func GetErrMsg(code int) string {

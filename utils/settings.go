@@ -20,6 +20,9 @@ var (
 	InfoLog    string
 	ErrorLog   string
 	WarnLog    string
+
+	RushOrderCost         float32
+	RushOrder2PendingTime int64
 )
 
 func init() {
@@ -27,18 +30,20 @@ func init() {
 	if err != nil {
 		log.Fatalln("read config file error", err)
 	}
+	Setting()
 	LoadDBConfig(file)
 	LoadServer(file)
 	LoadLogger(file)
+	LoadServiceLogger(file)
 }
 
-// 一些库的相关设置
+// Setting 一些库的相关设置
 func Setting() {
 	// 用于scanner的字段反射
 	scanner.SetTagName("structs")
 }
 
-// 读取数据库相关配置文件
+// LoadDBConfig 读取数据库相关配置文件
 func LoadDBConfig(file *ini.File) {
 	var err error
 	Db = file.Section("database").Key("Db").String()
@@ -52,17 +57,21 @@ func LoadDBConfig(file *ini.File) {
 	}
 }
 
-// 读取服务器相关配置文件
+// LoadServer 读取服务器相关配置文件
 func LoadServer(file *ini.File) {
 	AppMode = file.Section("server").Key("AppMode").MustString("debug")
 	HttpPort = file.Section("server").Key("HttpPort").MustString(":8000")
 	JwtKey = file.Section("server").Key("JwyKey").MustString("fdasasferqw")
 }
 
-// 读取日志相关配置文件
+// LoadLogger 读取日志相关配置文件
 func LoadLogger(file *ini.File) {
 	LoggerMode = file.Section("logger").Key("LoggerMode").MustString("development")
 	InfoLog = file.Section("logger").Key("InfoLog").MustString("./info.log")
 	ErrorLog = file.Section("logger").Key("ErrorLog").MustString("./error.log")
 	WarnLog = file.Section("logger").Key("WarnLog").MustString("./warn.log")
+}
+func LoadServiceLogger(file *ini.File) {
+	RushOrderCost = float32(file.Section("service").Key("RushOrderCost").MustFloat64(0.5))
+	RushOrder2PendingTime = file.Section("service").Key("RushOrder2PendingTime").MustInt64(10)
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"service/model"
 	"service/service"
+	"service/utils"
 	"service/utils/cronjob"
 	"service/utils/errmsg"
 	"service/utils/validator"
@@ -13,12 +14,23 @@ import (
 )
 
 func NewOrderController(ctx *gin.Context) {
-	var data model.Order
+	var jsonData model.Order
 	// 数据绑定
-	err := ctx.ShouldBindJSON(&data)
+	err := ctx.ShouldBindJSON(&jsonData)
 	if err != nil {
-		ginBindError(ctx, err, "NewOrderController", data)
+		ginBindError(ctx, err, "NewOrderController", jsonData)
 		return
+	}
+	// 只接受这些字段，其他字段不接受。
+	data := model.Order{
+		Id:        jsonData.Id,
+		UserId:    jsonData.UserId,
+		ServiceId: jsonData.ServiceId,
+		AdvisorId: jsonData.AdvisorId,
+		Situation: jsonData.Situation,
+		Question:  jsonData.Question,
+		Coin:      jsonData.Coin,
+		Status:    model.Pending,
 	}
 	// 数据基本校验
 	msg, code := validator.Validate(data)
@@ -72,12 +84,23 @@ func NewOrderController(ctx *gin.Context) {
 	// ------- 输入数据检查 -------
 	data.Status = 0
 	data.CreateTime = time.Now().Unix()
-	// 加急订单的价格 只做记录
-	data.RushCoin = data.Coin / 2
-	code, data.Id = service.NewOrderAndCostTrans(&data)
-	//if code==errmsg.SUCCESS{
-	//	// TODO 订单状态24h后过期
-	//}
+	// 加急订单的价格 只做记录，等到用户加急的时候安装这个去扣钱
+	data.RushCoin = data.Coin * utils.RushOrderCost
+	// 订单状态24h后过期
+	job := cronjob.CronJob{
+		OrderId:    data.Id,
+		UserId:     data.UserId,
+		CreateTime: data.CreateTime,
+		CronId:     -1,
+		CronType:   cronjob.PendingOrderType,
+	}
+	code = cronjob.AddJob(&job)
+	if code == errmsg.SUCCESS {
+		code, data.Id = service.NewOrderAndCostTrans(&data)
+		if code != errmsg.SUCCESS {
+			cronjob.CloseJob(&job)
+		}
+	}
 	commonReturn(ctx, code, "", data)
 	return
 }
@@ -201,7 +224,7 @@ func RushOrderController(ctx *gin.Context) {
 		OrderId:  data.Id,
 		UserId:   data.UserId,
 		RushTime: data.RushTime,
-		CronId:   -1,
+		CronType: cronjob.RushOrderType,
 	}
 	code = cronjob.AddJob(&job)
 	if code == errmsg.SUCCESS {
