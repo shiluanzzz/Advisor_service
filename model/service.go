@@ -1,12 +1,14 @@
 package model
 
+import "service/utils/errmsg"
+
 type Service struct {
-	Id          int64   `structs:"id" json:"id"`
-	AdvisorId   int64   `structs:"advisor_id" json:"advisor_phone"`
-	ServiceName string  `structs:"service_name" json:"service_name"  validate:"required"`
-	ServiceId   int     `structs:"service_id" json:"service_id"`
-	Price       float32 `structs:"price" json:"price" validate:"required,number,gte=1,lte=36"`
-	Status      int     `structs:"status" json:"status" validate:"required,number,gte=0,lte=1"`
+	Id            int64   `structs:"id" json:"id"`
+	AdvisorId     int64   `structs:"advisor_id" json:"advisorPhone"`
+	ServiceName   string  `structs:"service_name" json:"serviceName"  validate:"required"`
+	ServiceNameId int     `structs:"service_name_id" json:"serviceNameId"`
+	Price         float32 `structs:"price" json:"price" validate:"required,number,gte=1,lte=36"`
+	Status        int     `structs:"status" json:"status" validate:"required,number,gte=0,lte=1"`
 }
 
 //type ServiceKind struct {
@@ -22,4 +24,12 @@ var ServiceKind = map[int]string{
 	2: "24h Delivered Audio Reading",
 	3: "24h Delivered Text Reading",
 	4: "Live Text Chat",
+}
+
+func GetServiceNameById(id int) (int, string) {
+	if name := ServiceKind[id]; name != "" {
+		return errmsg.SUCCESS, name
+	} else {
+		return errmsg.ErrorServiceNotExist, name
+	}
 }

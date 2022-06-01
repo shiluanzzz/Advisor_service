@@ -43,7 +43,7 @@ func NewAdvisorController(ctx *gin.Context) {
 		}
 	}
 	// success
-	commonReturn(ctx, code, msg, &data)
+	commonReturn(ctx, code, msg, data)
 	return
 }
 func UpdateAdvisorController(ctx *gin.Context) {

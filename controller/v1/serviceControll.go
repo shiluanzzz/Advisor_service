@@ -10,12 +10,16 @@ import (
 // ModifyServiceStatus 修改顾客的服务状态
 func ModifyServiceStatus(ctx *gin.Context) {
 	type serviceStatus struct {
-		AdvisorId int64 `json:"advisorId"`
-		ServiceID int   `form:"serviceId" json:"serviceId" validate:"required,number,lte=4"`
-		Status    int   `form:"status" validate:"number,min=0,max=1"`
+		AdvisorId     int64 `json:"advisorId"`
+		ServiceNameId int   `form:"serviceNameId" json:"serviceNameId" validate:"required,number,lte=4"`
+		Status        int   `form:"status" validate:"number,min=0,max=1"`
 	}
 	var data serviceStatus
 	err := ctx.ShouldBind(&data)
+	if ctx.GetString("role") != service.ADVISORTABLE {
+		commonReturn(ctx, errmsg.ErrorTokenRoleNotMatch, "", data)
+		return
+	}
 	if err != nil {
 		ginBindError(ctx, err, "ModifyServiceStatus", data)
 		return
@@ -24,7 +28,7 @@ func ModifyServiceStatus(ctx *gin.Context) {
 	msg, code := validator.Validate(data)
 	data.AdvisorId = ctx.GetInt64("id")
 	if code == errmsg.SUCCESS {
-		code = service.ModifyServiceStatus(data.AdvisorId, data.ServiceID, data.Status)
+		code = service.ModifyServiceStatus(data.AdvisorId, data.ServiceNameId, data.Status)
 	}
 	commonReturn(ctx, code, msg, data)
 	return
@@ -34,11 +38,15 @@ func ModifyServiceStatus(ctx *gin.Context) {
 func ModifyServicePrice(ctx *gin.Context) {
 	type servicePrice struct {
 		AdvisorId int64   `json:"advisorId"`
-		ServiceID int     `form:"serviceId" json:"serviceId" validate:"required,number,lte=4"`
+		ServiceID int     `form:"serviceNameId" json:"serviceNameId" validate:"required,number,lte=4"`
 		Price     float32 `form:"price" validate:"required,number,gte=1,lte=36"`
 	}
 	var data servicePrice
 	err := ctx.ShouldBind(&data)
+	if ctx.GetString("role") != service.ADVISORTABLE {
+		commonReturn(ctx, errmsg.ErrorTokenRoleNotMatch, "", data)
+		return
+	}
 	data.AdvisorId = ctx.GetInt64("id")
 	if err != nil {
 		ginBindError(ctx, err, "ModifyServiceStatus", data)

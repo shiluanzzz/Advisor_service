@@ -20,11 +20,11 @@ func NewService(advisorId int64, tx *sql.Tx) int {
 	for k, v := range model.ServiceKind {
 		data = append(data,
 			structs.Map(model.Service{
-				AdvisorId:   advisorId,
-				ServiceName: v,
-				ServiceId:   k,
-				Price:       1,
-				Status:      0,
+				AdvisorId:     advisorId,
+				ServiceName:   v,
+				ServiceNameId: k,
+				Price:         1,
+				Status:        0,
 			}),
 		)
 	}
@@ -45,8 +45,8 @@ func NewService(advisorId int64, tx *sql.Tx) int {
 // ModifyServicePrice 修改服务的价格
 func ModifyServicePrice(advisorId int64, serviceId int, price float32) int {
 	where := map[string]interface{}{
-		"service_id": serviceId,
-		"advisor_id": advisorId,
+		"service_name_id": serviceId,
+		"advisor_id":      advisorId,
 	}
 	updates := map[string]interface{}{
 		"price": price,
@@ -67,8 +67,8 @@ func ModifyServicePrice(advisorId int64, serviceId int, price float32) int {
 // ModifyServiceStatus 修改服务状态
 func ModifyServiceStatus(advisorId int64, serviceId int, newStatus int) int {
 	where := map[string]interface{}{
-		"service_id": serviceId,
-		"advisor_id": advisorId,
+		"service_name_id": serviceId,
+		"advisor_id":      advisorId,
 	}
 	updates := map[string]interface{}{
 		"status": newStatus,
@@ -91,7 +91,8 @@ func GetAdvisorService(id int64) (int, []map[string]interface{}) {
 		"advisor_id": id,
 		"status":     1,
 	}
-	selects := []string{"service_name", "service_id", "price"}
+	selects := []string{"*"}
+	//selects := []string{"id", "service_name", "service_id", "price"}
 	cond, values, err := qb.BuildSelect(SERVICETABLE, where, selects)
 	if err != nil {
 		logger.GendryBuildError("GetAdvisorService", err)
@@ -109,3 +110,9 @@ func GetAdvisorService(id int64) (int, []map[string]interface{}) {
 	}
 	return errmsg.SUCCESS, res
 }
+
+//func GetAdvisorServicePrice(serviceId int64) (int, float64) {
+//	where := map[string]interface{}{
+//		"id": serviceId,
+//	}
+//}

@@ -16,10 +16,11 @@ func GetAdvisorInfo(Id int64) (int, []map[string]interface{}) {
 	where := map[string]interface{}{
 		"id": Id,
 	}
-	selects := []string{
-		"name", "phone", "coin", "total_order_num", "status",
-		"rank", "rank_num", "work_experience", "bio", "about",
-	}
+	//selects := []string{
+	//	"id", "name", "phone", "coin", "total_order_num", "status",
+	//	"rank", "rank_num", "work_experience", "bio", "about",
+	//}
+	selects := []string{"*"}
 	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {
 		logger.Log.Error("获取顾问信息错误，编译SQL错误", zap.Error(err))
@@ -32,11 +33,15 @@ func GetAdvisorInfo(Id int64) (int, []map[string]interface{}) {
 	}
 	res, err := scanner.ScanMapDecodeClose(row)
 	if err != nil {
-		logger.GendryScannerError("GetAdvisorInfor", err)
+		logger.GendryScannerError("GetAdvisorInfo", err)
 		return errmsg.ErrorSqlScanner, nil
 	}
 	if res == nil {
 		return errmsg.ErrorAdvisorNotExist, nil
+	}
+	// 不传回密码
+	for _, each := range res {
+		delete(each, "password")
 	}
 	return errmsg.SUCCESS, res
 }
@@ -48,7 +53,7 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 		"_limit": []uint{(uPage - 1) * 10, uPage * 10},
 	}
 	selects := []string{
-		"phone", "name", "bio",
+		"id", "phone", "name", "bio",
 	}
 	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 var USERTABLE = "user"
 
-// NewUser 新增用户
+// NewUser 新增用户或者顾问
 func NewUser(table string, user *model.Login, tx *sql.Tx) (int, int64) {
 	// 转化数据并生成sql语句
 	var data []map[string]interface{}
@@ -66,12 +66,11 @@ func GetId(table, phone string) (id int64, errCode int) {
 }
 
 // GetUserInfo 获取用户的全部信息
-func GetUserInfo(userId int64) (int, interface{}) {
+func GetUserInfo(userId int64) (int, map[string]interface{}) {
 	where := map[string]interface{}{
 		"id": userId,
 	}
-	// 一次获取全部key? TODO
-	selects := []string{"name", "phone", "birth", "gender", "bio", "about", "coin"}
+	selects := []string{"*"}
 	cond, values, err := qb.BuildSelect(USERTABLE, where, selects)
 	if err != nil {
 		logger.Log.Error("获取用户信息错误，编译SQL错误", zap.Error(err))
@@ -87,5 +86,13 @@ func GetUserInfo(userId int64) (int, interface{}) {
 	if err != nil {
 		logger.Log.Error("gendry scanner赋值出错", zap.Error(err))
 	}
-	return errmsg.SUCCESS, res
+	if len(res) > 1 {
+		return errmsg.ErrorRowNotExpect, nil
+	} else if len(res) == 0 {
+		return errmsg.ErrorNoResult, nil
+	} else {
+		t := res[0]
+		delete(t, "password")
+		return errmsg.SUCCESS, t
+	}
 }
