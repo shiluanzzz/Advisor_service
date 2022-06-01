@@ -8,6 +8,7 @@ import (
 	"service/utils"
 	"service/utils/cronjob"
 	"service/utils/errmsg"
+	"service/utils/logger"
 	"service/utils/validator"
 	"strconv"
 	"time"
@@ -38,37 +39,41 @@ func NewOrderController(ctx *gin.Context) {
 		commonReturn(ctx, code, msg, data)
 		return
 	}
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn(errmsg.GetErrMsg(code))
+		}
+		commonReturn(ctx, code, "", data)
+	}()
 	// ------- 输入数据检查 -------
 	// token role角色校验
 	if ctx.GetString("role") != service.USERTABLE {
-		commonReturn(ctx, errmsg.ErrorTokenRoleNotMatch, ctx.GetString("role"), data)
+		code = errmsg.ErrorTokenRoleNotMatch
 		return
 	}
 	// user_id 跟 token里的id是否一致
 	if data.UserId == 0 {
 		data.UserId = ctx.GetInt64("id")
 	} else if data.UserId != ctx.GetInt64("id") {
-		commonReturn(ctx, errmsg.ErrorIdNotMatchWithToken, "", data)
+		code = errmsg.ErrorIdNotMatchWithToken
 		return
 	}
 	// serviceId 跟顾问的Id是否绑定正确
 	code, advisorIdInSQL := service.GetTableItem(service.SERVICETABLE, data.ServiceId, "advisor_id")
 	if code != errmsg.SUCCESS {
-		commonReturn(ctx, code, "", data)
 		return
 	}
 	if advisorIdInSQL.(int64) != data.AdvisorId {
-		commonReturn(ctx, errmsg.ErrorServiceIdNotMatchWithAdvisorID, "", data)
+		code = errmsg.ErrorServiceIdNotMatchWithAdvisorID
 		return
 	}
 	// serviceId 是否还是open的
 	code, serviceStatus := service.GetTableItem(service.SERVICETABLE, data.ServiceId, "status")
 	if code != errmsg.SUCCESS {
-		commonReturn(ctx, code, "", data)
 		return
 	}
 	if serviceStatus.(int64) != 1 {
-		commonReturn(ctx, errmsg.ErrorServiceNotOpen, "", data)
+		code = errmsg.ErrorServiceNotOpen
 		return
 	}
 	// coin如果==0或者前端没传 自己查 如果传了但是不一致，返回可能顾问可能修改了价格
@@ -76,12 +81,11 @@ func NewOrderController(ctx *gin.Context) {
 	if data.Coin == 0 {
 		data.Coin = coinInSQL.(float32)
 	} else if data.Coin != coinInSQL || data.Coin < -1 {
-		commonReturn(ctx, errmsg.ErrorPriceNotMatch, "", data)
+		code = errmsg.ErrorPriceNotMatch
 		return
 	}
-	// 钱够吗你? 放到订单的创建事务中去了
 
-	// ------- 输入数据检查 -------
+	// ------- 输入数据检查结束 -------
 	data.Status = 0
 	data.CreateTime = time.Now().Unix()
 	// 加急订单的价格 只做记录，等到用户加急的时候安装这个去扣钱
@@ -101,7 +105,6 @@ func NewOrderController(ctx *gin.Context) {
 			cronjob.CloseJob(&job)
 		}
 	}
-	commonReturn(ctx, code, "", data)
 	return
 }
 func GetOrderListController(ctx *gin.Context) {
