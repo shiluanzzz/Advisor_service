@@ -26,6 +26,15 @@ func commonReturn(ctx *gin.Context, code int, msg string, data interface{}) {
 	return
 }
 
+//func commonDefer(ctx *gin.Context, funcName string, code *int, msg *string, data interface{}) {
+//	defer func() {
+//		if *code != errmsg.SUCCESS {
+//			logger.Log.Warn(errmsg.GetErrMsg(*code), zap.String("func", funcName))
+//		}
+//		commonReturn(ctx, *code, *msg, data)
+//	}()
+//}
+
 // ginBindError gin绑定数据的error 返回
 func ginBindError(ctx *gin.Context, err error, funcName string, data interface{}) {
 	code := errmsg.ErrorGinBind
@@ -66,8 +75,8 @@ func Login(table string, ctx *gin.Context) {
 	commonReturn(ctx, code, "", data)
 }
 
-// UpdateUserPwd 修改用户密码
-func UpdatePwdControl(table string, ctx *gin.Context) {
+// UpdatePwdController  修改用户密码
+func UpdatePwdController(table string, ctx *gin.Context) {
 	// 拿数据
 	var data model.ChangePwd
 	err := ctx.ShouldBind(&data)
@@ -99,7 +108,7 @@ func Case2CamelCase(str string) string {
 	return LowFirst(str)
 }
 
-// 首字母小写
+// LowFirst 首字母小写
 func LowFirst(str string) string {
 	for i, v := range str {
 		return string(unicode.ToLower(v)) + str[i+1:]
@@ -107,7 +116,7 @@ func LowFirst(str string) string {
 	return ""
 }
 
-// 把数据转换为小驼峰返回
+// TransformDataSlice 把数据转换为小驼峰返回
 func TransformDataSlice(data []map[string]interface{}) []map[string]interface{} {
 	var res []map[string]interface{}
 	for _, each := range data {

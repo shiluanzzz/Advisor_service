@@ -35,6 +35,7 @@ func (order *CronJob) Run() {
 	switch order.CronType {
 	case RushOrderType:
 		if now-order.RushTime > utils.RushOrder2PendingTime*60 {
+			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Rush, model.Pending)
 			// 这个订单被顾问回答了 或者执行成功了
 			if code == errmsg.ErrorOrderHasCompleted || code == errmsg.SUCCESS {
@@ -45,6 +46,7 @@ func (order *CronJob) Run() {
 		}
 	case PendingOrderType:
 		if now-order.CreateTime > 60*60*24 {
+			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Pending, model.Expired)
 			if code == errmsg.SUCCESS {
 				CloseJob(order)
@@ -59,18 +61,20 @@ var closeJobChan chan CronJob
 var jobMap map[int]*CronJob
 var C *cron.Cron
 
-func init() {
+func InitCronJob() {
 	closeJobChan = make(chan CronJob, 100)
 	jobMap = make(map[int]*CronJob)
 	C = cron.New()
 	C.Start()
 	// 单开一个协程专门用来关闭不需要的定时任务
 	go closeTask(C, closeJobChan, &jobMap)
+	// 恢复数据库中可能存在的任务
+	go recoverJobs()
 
 }
 func AddJob(job *CronJob) int {
 	jobId, err := C.AddJob("@every 1m", job)
-	logMsg := fmt.Sprintf("创建定时任务%d成功", job.CronType)
+	logMsg := fmt.Sprintf("创建定时任务%d", job.CronType)
 	if err != nil {
 		logger.Log.Error(logMsg, zap.Error(err))
 		return errmsg.ErrorCronAddJob
@@ -95,4 +99,43 @@ func closeTask(c *cron.Cron, closeChan chan CronJob, jobMap *map[int]*CronJob) {
 	}
 }
 
-// 系统异常退出 保存job TODO
+// 系统异常退出 从数据库重新读取表
+func recoverJobs() {
+	code, res := service.GetManyTableItemsByWhere(service.ORDERTABLE,
+		map[string]interface{}{"status": model.Pending},
+		[]string{"id", "user_id", "create_time"},
+	)
+	if code == errmsg.SUCCESS {
+		if len(res) != 0 {
+			logger.Log.Info(fmt.Sprintf("从数据库中查询到%d条需要定时处理的普通订单", len(res)))
+		}
+		for _, v := range res {
+			job := CronJob{
+				OrderId:    v["id"].(int64),
+				UserId:     v["user_id"].(int64),
+				CreateTime: v["create_time"].(int64),
+				CronType:   PendingOrderType,
+			}
+			_ = AddJob(&job)
+		}
+	}
+
+	code, res = service.GetManyTableItemsByWhere(service.ORDERTABLE,
+		map[string]interface{}{"status": model.Rush},
+		[]string{"id", "user_id", "rush_time"},
+	)
+	if code == errmsg.SUCCESS {
+		if len(res) != 0 {
+			logger.Log.Info(fmt.Sprintf("从数据库中查询到%d条需要定时处理的加急订单", len(res)))
+		}
+		for _, v := range res {
+			job := CronJob{
+				OrderId:    v["id"].(int64),
+				UserId:     v["user_id"].(int64),
+				CreateTime: v["rush_time"].(int64),
+				CronType:   RushOrderType,
+			}
+			_ = AddJob(&job)
+		}
+	}
+}

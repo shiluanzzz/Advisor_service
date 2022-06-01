@@ -98,7 +98,7 @@ func NewUser(ctx *gin.Context) {
 
 // UpdateUserPwd 修改用户密码
 func UpdateUserPwd(ctx *gin.Context) {
-	UpdatePwdControl(service.USERTABLE, ctx)
+	UpdatePwdController(service.USERTABLE, ctx)
 }
 
 // UserLogin 用户登录

@@ -2,7 +2,6 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 	"reflect"
 	"service/model"
 	"service/service"
@@ -15,18 +14,25 @@ import (
 func NewAdvisorController(ctx *gin.Context) {
 	var table = service.ADVISORTABLE
 	var data model.Login
+	var code int
+	var msg string
 	// 数据绑定
 	err := ctx.ShouldBindJSON(&data)
 	if err != nil {
 		ginBindError(ctx, err, "NewUser", data)
 		return
 	}
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn(errmsg.GetErrMsg(code))
+		}
+		commonReturn(ctx, code, msg, data)
+	}()
+
 	// 数据校验
-	msg, code := validator.Validate(data)
+	msg, code = validator.Validate(data)
 	// 数据不合法
 	if code != errmsg.SUCCESS {
-		logger.Log.Warn("数据校验非法", zap.Error(err))
-		commonReturn(ctx, code, msg, data)
 		return
 	}
 	// 调用service层 检查手机号是否重复
@@ -35,53 +41,55 @@ func NewAdvisorController(ctx *gin.Context) {
 		// 用户密码加密存储
 		data.Password = service.GetPwd(data.Password)
 		// 顾问的创建和服务的创建使用事务统一提交
-		code, id := service.NewAdvisorAndOrder(&data)
-		if code == errmsg.SUCCESS {
-			data.Id = id
-		} else {
-			data.Id = -1
-		}
+		code, data.Id = service.NewAdvisorAndOrder(&data)
 	}
 	// success
-	commonReturn(ctx, code, msg, data)
 	return
 }
 func UpdateAdvisorController(ctx *gin.Context) {
 
 	var data map[string]interface{}
-	//data := map[string]interface{}{}
 	var code int
+	var msg string
 	// 数据绑定
 	err := ctx.ShouldBindJSON(&data)
 	if err != nil {
 		ginBindError(ctx, err, "UpdateAdvisorController", data)
 		return
 	}
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn(errmsg.GetErrMsg(code))
+		}
+		commonReturn(ctx, code, msg, data)
+	}()
+
 	// 数据校验 将不同的字段绑定到不同的校验函数中，使用反射做校验
 	// 不存在的字段在函数中做了检验
 	validateFunc := map[string]interface{}{
-		"name":            validator.Name,
-		"phone":           validator.Phone,
-		"work_experience": validator.WorkExperience,
-		"bio":             validator.Bio,
-		"about":           validator.About,
-	}
-	if value := data["workExperience"]; value != nil {
-		data["work_experience"] = int(value.(float64))
-		value = int(value.(float64))
-		delete(data, "workExperience")
+		"name":           validator.Name,
+		"phone":          validator.Phone,
+		"workExperience": validator.WorkExperience,
+		"bio":            validator.Bio,
+		"about":          validator.About,
 	}
 	for key, value := range data {
 		// 判断是否传的都是字符类型 手机号码传数字会被识别为float不好处理
 		// json中的字符被识别为float
-		if key == "phone" && reflect.TypeOf(value).Kind() != reflect.TypeOf("1").Kind() {
-			value = strconv.FormatFloat(value.(float64), 'f', 0, 64)
+		if key == "phone" {
+			if reflect.TypeOf(value).Kind() == reflect.TypeOf(float32(1.0)).Kind() {
+				value = strconv.FormatFloat(value.(float64), 'f', 0, 64)
+			}
 		}
-
-		msg, code := validator.CallFunc(validateFunc, key, value)
+		if key == "workExperience" {
+			if reflect.TypeOf(value).Kind() != reflect.TypeOf(float32(1.0)).Kind() {
+				code = errmsg.ErrorInput
+				return
+			}
+			value = int(value.(float64))
+		}
+		msg, code = validator.CallFunc(validateFunc, key, value)
 		if code != errmsg.SUCCESS {
-			logger.Log.Warn("数据校验非法", zap.Error(err))
-			commonReturn(ctx, code, msg, data)
 			return
 		}
 	}
@@ -90,17 +98,24 @@ func UpdateAdvisorController(ctx *gin.Context) {
 	if data["phone"] != nil {
 		code = service.CheckPhoneExist(service.USERTABLE, data["phone"])
 		if code != errmsg.SUCCESS {
-			commonReturn(ctx, code, "", data)
 			return
 		}
 	}
 	// 更新
+	data["work_experience"] = data["workExperience"]
+	delete(data, "workExperience")
 	code = service.Update(service.ADVISORTABLE, data)
-	commonReturn(ctx, code, "", data)
+	return
 }
 
 func UpdateAdvisorPwd(ctx *gin.Context) {
-	UpdatePwdControl(service.ADVISORTABLE, ctx)
+	// 跟user修改密码共用一个接口，只不过涉及的表名不一样
+	UpdatePwdController(service.ADVISORTABLE, ctx)
+}
+
+// AdvisorLogin 顾问登录
+func AdvisorLogin(ctx *gin.Context) {
+	Login(service.ADVISORTABLE, ctx)
 }
 
 // GetAdvisorList 获取顾问的列表
@@ -115,11 +130,6 @@ func GetAdvisorList(ctx *gin.Context) {
 	}
 	code, data := service.GetAdvisorList(page)
 	commonReturn(ctx, code, "", data)
-}
-
-// AdvisorLogin 顾问登录
-func AdvisorLogin(ctx *gin.Context) {
-	Login(service.ADVISORTABLE, ctx)
 }
 
 // GetAdvisorInfo 获取顾问的详细信息
@@ -148,21 +158,33 @@ func GetAdvisorInfo(ctx *gin.Context) {
 
 // ModifyAdvisorStatus 顾问修改自己的服务状态
 func ModifyAdvisorStatus(ctx *gin.Context) {
-	id := ctx.GetInt64("id")
-	var newStatus model.ServiceState
-	err := ctx.ShouldBind(&newStatus)
-	returnData := map[string]interface{}{
-		"id":     id,
-		"status": newStatus.Status,
-	}
+	var code int
+	var msg string
+	var data model.ServiceState
+
+	err := ctx.ShouldBind(&data)
 	if err != nil {
-		ginBindError(ctx, err, "ModifyAdvisorStatus", returnData)
+		ginBindError(ctx, err, "ModifyAdvisorStatus", data)
 		return
 	}
-	msg, code := validator.Validate(newStatus)
-	if code == errmsg.SUCCESS {
-		code = service.ModifyAdvisorStatus(id, newStatus.Status)
+	if ctx.GetString("role") != service.ADVISORTABLE {
+		code = errmsg.ErrorTokenRoleNotMatch
 	}
-	commonReturn(ctx, code, msg, returnData)
+	data.Id = ctx.GetInt64("id")
+
+	// return func
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn(errmsg.GetErrMsg(code))
+		}
+		commonReturn(ctx, code, msg, data)
+	}()
+	// 输入校验后执行业务逻辑
+	msg, code = validator.Validate(data)
+	if code == errmsg.SUCCESS {
+		code = service.UpdateTableItem(service.ADVISORTABLE, data.Id, map[string]interface{}{
+			"status": data.Status,
+		})
+	}
 	return
 }

@@ -12,7 +12,8 @@ type Service struct {
 }
 
 type ServiceState struct {
-	Status int `structs:"status" form:"status" validate:"required,number,min=0,max=1"`
+	Id     int64 `json:"advisorId"`
+	Status int   `structs:"status" form:"status" validate:"required,number,min=0,max=1"`
 }
 
 var ServiceKind = map[int]string{

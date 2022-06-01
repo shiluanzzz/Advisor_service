@@ -7,6 +7,7 @@ import (
 	qb "github.com/didi/gendry/builder"
 	"github.com/didi/gendry/scanner"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/crypto/bcrypt"
 	"service/utils"
 	"service/utils/errmsg"
@@ -99,28 +100,13 @@ func checkPwd(pwd string, encryptPwd string) int {
 func CheckRolePwd(table string, id int64, pwd string) int {
 	var encryptPwd string
 	// 从数据库中查加密后的密码
-	where := map[string]interface{}{
-		"id": id,
+	code, res := GetTableItem(table, id, "password")
+	if code == errmsg.SUCCESS {
+		encryptPwd = fmt.Sprintf("%s", res)
+		// 查到了加密密码在比对
+		return checkPwd(pwd, encryptPwd)
 	}
-	selectFiled := []string{"password"}
-	cond, value, err := qb.BuildSelect(table, where, selectFiled)
-	if err != nil {
-		logger.GendryBuildError("CheckRolePwd", err)
-		return errmsg.ErrorSqlBuild
-	}
-	rows := utils.DbConn.QueryRow(cond, value...)
-	// TODO
-	err = rows.Scan(&encryptPwd)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errmsg.ErrorUserNotExist
-		} else {
-			logger.SqlError("CheckRolePwd", "select", err)
-			return errmsg.ErrorPasswordWrong
-		}
-	}
-	// 查到了加密密码在比对
-	return checkPwd(pwd, encryptPwd)
+	return code
 }
 
 // Update 更新用户或者顾问的信息
@@ -165,6 +151,7 @@ func CheckIdExist(id int64, table string) int {
 	}
 }
 
+// GetTableItem 通用的单项查询结构 字符串类型返回的是uint8
 func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.Tx) (int, interface{}) {
 	where := map[string]interface{}{
 		"id": tableId,
@@ -190,15 +177,80 @@ func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.
 	return errmsg.SUCCESS, res
 }
 
+// GetManyTableItemsById 通过Id字段查从数据表中查多个字段
+func GetManyTableItemsById(tableName string, tableId int64, selects []string, tx ...*sql.Tx) (int, map[string]interface{}) {
+	where := map[string]interface{}{
+		"id": tableId,
+	}
+	cond, values, err := qb.BuildSelect(tableName, where, selects)
+	if err != nil {
+		logger.GendryBuildError("GetManyTableItemsById", err)
+		return errmsg.ErrorSqlBuild, nil
+	}
+	var rows *sql.Rows
+	if len(tx) != 0 {
+		rows, err = tx[0].Query(cond, values...)
+	} else {
+		rows, err = utils.DbConn.Query(cond, values...)
+	}
+	results, err := scanner.ScanMapDecodeClose(rows)
+	if err != nil {
+		logger.GendryScannerError("GetManyTableItemsById", err, "cond", cond, "values", values)
+		return errmsg.ErrorSqlScanner, nil
+	}
+	if len(results) > 1 {
+		logger.Log.Error("主键查出多条数据来了", zap.Int64("id", tableId), zap.String("table", tableName))
+		return errmsg.ErrorRowNotExpect, nil
+	} else if len(results) == 0 {
+		return errmsg.ErrorNoResult, nil
+	}
+	return errmsg.SUCCESS, results[0]
+
+}
+
+// GetManyTableItemsByWhere 通过条件判断从数据表中查多个字段
+func GetManyTableItemsByWhere(tableName string, where map[string]interface{}, selects []string, tx ...*sql.Tx) (int, []map[string]interface{}) {
+	cond, values, err := qb.BuildSelect(tableName, where, selects)
+	if err != nil {
+		logger.GendryBuildError("GetManyTableItemsByWhere", err)
+		return errmsg.ErrorSqlBuild, nil
+	}
+	var rows *sql.Rows
+	if len(tx) != 0 {
+		rows, err = tx[0].Query(cond, values...)
+	} else {
+		rows, err = utils.DbConn.Query(cond, values...)
+	}
+	results, err := scanner.ScanMapDecodeClose(rows)
+	if err != nil {
+		logger.GendryScannerError("GetManyTableItemsByWhere", err, "cond", cond, "values", values)
+		return errmsg.ErrorSqlScanner, nil
+	}
+	return errmsg.SUCCESS, results
+}
+
 // UpdateTableItem 单项更新表值，传入表名，表id，map，tx为事务可选
-func UpdateTableItem(tableName string, tableId int64, updates map[string]interface{}, tx ...*sql.Tx) int {
+func UpdateTableItem(tableName string, tableId int64, updates map[string]interface{}, tx ...*sql.Tx) (code int) {
+	defer func() {
+		fields := []zapcore.Field{
+			zap.String("table", tableName),
+			zap.Int64("table", tableId),
+			zap.String("updates", fmt.Sprintf("%v", updates)),
+		}
+		if code == errmsg.SUCCESS {
+			logger.Log.Info("更新表", fields...)
+		} else {
+			logger.Log.Error("更新表", fields...)
+		}
+	}()
 	where := map[string]interface{}{
 		"id": tableId,
 	}
 	cond, values, err := qb.BuildUpdate(tableName, where, updates)
 	if err != nil {
 		logger.GendryBuildError("UpdateTableItem", err)
-		return errmsg.ErrorSqlBuild
+		code = errmsg.ErrorSqlBuild
+		return code
 	}
 	var res sql.Result
 	if len(tx) != 0 {
@@ -208,16 +260,19 @@ func UpdateTableItem(tableName string, tableId int64, updates map[string]interfa
 	}
 	if err != nil {
 		logger.Log.Error("通用service接口更新参数值失败", zap.Error(err), zap.String("cond", cond), zap.String("values", fmt.Sprintf("%v", values)))
-		return errmsg.ErrorMysql
+		code = errmsg.ErrorMysql
+		return code
 	}
 	affectRow, err := res.RowsAffected()
 	if err != nil {
 		logger.Log.Error("获取res.RowsAffected()失败", zap.Error(err))
-		return errmsg.ErrorMysql
+		code = errmsg.ErrorMysql
+		return code
 	}
 	if affectRow != 1 {
 		logger.Log.Error(errmsg.GetErrMsg(errmsg.ErrorAffectsNotOne), zap.String("id", fmt.Sprintf("%v", tableId)), zap.String("table", tableName))
-		return errmsg.ErrorAffectsNotOne
+		code = errmsg.ErrorAffectsNotOne
+		return code
 	}
 	return errmsg.SUCCESS
 }

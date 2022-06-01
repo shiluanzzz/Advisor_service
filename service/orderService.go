@@ -16,25 +16,30 @@ import (
 var ORDERTABLE = "user_order"
 
 func NewOrderAndCostTrans(model *model.Order) (int, int64) {
+	var code int
 	begin, err := utils.DbConn.Begin()
+	//  defer在函数返回后统一判断事务是否需要回滚
+	defer func() {
+		if code != errmsg.SUCCESS {
+			err = begin.Rollback()
+			logger.Log.Error("事务回滚失败!", zap.Error(err))
+		}
+	}()
 	if err != nil {
-		_ = begin.Rollback()
-		logger.Log.Error("事务创建失败", zap.Error(err))
-		return errmsg.ErrorSqlTransError, -1
+		code = errmsg.ErrorSqlTransError
+		return code, -1
 	}
 	//检查金币够不够
 	code, userCoin := GetTableItem(USERTABLE, model.UserId, "coin", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code, -1
 	} else if userCoin.(float32) < model.Coin {
-		_ = begin.Rollback()
-		return errmsg.ErrorOrderMoneyInsufficient, -1
+		code = errmsg.ErrorOrderMoneyInsufficient
+		return code, -1
 	}
 	// 扣掉金币
 	code = CostUserCoin(model, begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code, -1
 	}
 	// 新建订单
@@ -42,15 +47,14 @@ func NewOrderAndCostTrans(model *model.Order) (int, int64) {
 	if code == errmsg.SUCCESS {
 		err := begin.Commit()
 		if err != nil {
-			logger.Log.Error("事务提交失败", zap.Error(err))
-			return errmsg.ErrorSqlTransCommitError, -1
+			code = errmsg.ErrorSqlTransCommitError
+			return code, -1
 		}
-	} else {
-		_ = begin.Rollback()
 	}
 	return code, id
 }
 
+// NewOrder 新建订单
 func NewOrder(model *model.Order, tx *sql.Tx) (int, int64) {
 	// 转化数据并生成sql语句
 	var table = ORDERTABLE
@@ -79,18 +83,9 @@ func NewOrder(model *model.Order, tx *sql.Tx) (int, int64) {
 	return errmsg.SUCCESS, Id
 }
 
+// CostUserCoin 扣掉用户的金币
 func CostUserCoin(model *model.Order, tx *sql.Tx) int {
-	//where := map[string]interface{}{
-	//	"id": model.UserId,
-	//}
-	//updates := map[string]interface{}{
-	//	"coin": fmt.Sprintf("coin-%f", model.Coin),
-	//}
-	//cond, values, err := qb.BuildUpdate(USERTABLE, where, updates)
-	//if err != nil {
-	//	logger.GendryBuildError("orderService.CostUserCoin", err, "cond", cond, "update", updates)
-	//	return errmsg.ErrorSqlBuild
-	//}
+
 	cond := "update `user` set coin = coin - ? where id = ?"
 	row, err := tx.Exec(cond, model.Coin, model.UserId)
 	if err != nil {
@@ -128,48 +123,53 @@ func GetOrderList(advisorId int64) (int, []map[string]interface{}) {
 	return errmsg.SUCCESS, res
 }
 
-func GetOrderInfo(orderId int) (int, map[string]interface{}) {
-	where := map[string]interface{}{
-		"id": orderId,
-	}
-	selects := []string{"*"}
-	cond, values, err := qb.BuildSelect(ORDERTABLE, where, selects)
-	if err != nil {
-		logger.GendryBuildError("orderService.GetOrderInfo", err, "cond", cond, "values", values)
-		return errmsg.ErrorSqlBuild, nil
-	}
-	rows, err := utils.DbConn.Query(cond, values...)
-	if err != nil {
-		logger.SqlError("orderService.GetOrderInfo", "select", err, "cond", cond, "values", values)
-		return errmsg.ErrorMysql, nil
-	}
-	ress, err := scanner.ScanMapDecodeClose(rows)
-	if err != nil {
-		logger.GendryScannerError("orderService.GetOrderInfo", err, "cond", cond, "values", values)
-		return errmsg.ErrorSqlScanner, nil
-	}
-	if len(ress) > 1 {
-		return errmsg.ErrorRowNotExpect, nil
-	} else if len(ress) == 0 {
-		return errmsg.ErrorNoResult, nil
-	}
-	return errmsg.SUCCESS, ress[0]
-}
+//func GetOrderInfo(orderId int) (int, map[string]interface{}) {
+//	where := map[string]interface{}{
+//		"id": orderId,
+//	}
+//	selects := []string{"*"}
+//	cond, values, err := qb.BuildSelect(ORDERTABLE, where, selects)
+//	if err != nil {
+//		logger.GendryBuildError("orderService.GetOrderInfo", err, "cond", cond, "values", values)
+//		return errmsg.ErrorSqlBuild, nil
+//	}
+//	rows, err := utils.DbConn.Query(cond, values...)
+//	if err != nil {
+//		logger.SqlError("orderService.GetOrderInfo", "select", err, "cond", cond, "values", values)
+//		return errmsg.ErrorMysql, nil
+//	}
+//	ress, err := scanner.ScanMapDecodeClose(rows)
+//	if err != nil {
+//		logger.GendryScannerError("orderService.GetOrderInfo", err, "cond", cond, "values", values)
+//		return errmsg.ErrorSqlScanner, nil
+//	}
+//	if len(ress) > 1 {
+//		return errmsg.ErrorRowNotExpect, nil
+//	} else if len(ress) == 0 {
+//		return errmsg.ErrorNoResult, nil
+//	}
+//	return errmsg.SUCCESS, ress[0]
+//}
 
 // ReplyOrderServiceTrans 事务提交 订单回复服务
-func ReplyOrderServiceTrans(data *model.OrderReply) int {
+func ReplyOrderServiceTrans(data *model.OrderReply) (code int) {
 	begin, err := utils.DbConn.Begin()
+	defer func() {
+		if code != errmsg.SUCCESS {
+			err = begin.Rollback()
+			logger.Log.Error("事务回滚失败!", zap.Error(err))
+		}
+	}()
 	if err != nil {
-		_ = begin.Rollback()
-		logger.Log.Error("事务创建失败", zap.Error(err))
-		return errmsg.ErrorSqlTransError
+		code = errmsg.ErrorSqlTransError
+		return
 	}
 
 	// 获取订单的状态 检测订单是什么状态 只有pending,rush可以回复
 	code, OrderStatusInSQL := GetTableItem(ORDERTABLE, data.Id, "status", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
-		return errmsg.ErrorSqlSingleSelectError
+		code = errmsg.ErrorSqlSingleSelectError
+		return
 	}
 	canReply := false
 	for _, i := range model.GetOrderEnableReplyId() {
@@ -180,41 +180,41 @@ func ReplyOrderServiceTrans(data *model.OrderReply) int {
 		}
 	}
 	if !canReply {
-		_ = begin.Rollback()
-		return errmsg.ErrorOrderHasCompleted
+		code = errmsg.ErrorOrderHasCompleted
+		return
 	}
 
 	// 回复订单
-	code = replyOrder(data, begin)
+	//code = replyOrder(data, begin)
+	code = UpdateTableItem(ORDERTABLE, data.Id, map[string]interface{}{
+		"reply": data.Reply,
+	}, begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	// 增加金币
 	code = AddCoin2Advisor(data, begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	// 加急订单还有额外的金币
 	rushId := model.Rush
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	if rushId == int(data.Status) {
 		code = AddRushCoin2Advisor(data, begin)
 		if code != errmsg.SUCCESS {
-			_ = begin.Rollback()
 			return code
 		}
 	}
 	// 标记订单为完成状态
-	id := model.Completed
 	if code == errmsg.SUCCESS {
-		code = ModifyOrderStatus(data, id, begin)
+		//code = ModifyOrderStatus(data, id, begin)
+		code = UpdateTableItem(ORDERTABLE, data.Id, map[string]interface{}{
+			"status": model.Completed,
+		}, begin)
 	} else {
-		_ = begin.Rollback()
 		return code
 	}
 	// 事务终于结束了ho
@@ -316,43 +316,50 @@ func ModifyOrderStatus(data *model.OrderReply, status int, tx *sql.Tx) int {
 	return errmsg.SUCCESS
 }
 
-func RushOrderTrans(data *model.OrderRush) int {
+func RushOrderTrans(data *model.OrderRush) (code int) {
 	begin, err := utils.DbConn.Begin()
+	defer func() {
+		if code != errmsg.SUCCESS {
+			err = begin.Rollback()
+			logger.Log.Error("事务回滚失败!", zap.Error(err))
+		}
+	}()
+
 	if err != nil {
-		_ = begin.Rollback()
-		logger.Log.Error("事务创建失败", zap.Error(err))
-		return errmsg.ErrorSqlTransError
+		code = errmsg.ErrorSqlTransError
+		return
 	}
 	// 检测用户的金币是否足够
 	code, userMoney := GetTableItem(USERTABLE, data.UserId, "coin", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	//加急需要的钱
 	code, orderRushMoney := GetTableItem(ORDERTABLE, data.Id, "rush_coin", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	if userMoney.(float32) < orderRushMoney.(float32) {
 		return errmsg.ErrorOrderMoneyInsufficient
 	}
+
 	// 状态对吗 获取订单的状态 检测订单是什么状态 只有pending可以加急
 	code, OrderStatusInSQL := GetTableItem(ORDERTABLE, data.Id, "status", begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
-		return errmsg.ErrorSqlSingleSelectError
+		code = errmsg.ErrorSqlSingleSelectError
+		return
 	}
 	PendingId := model.Pending
 	if PendingId != int(OrderStatusInSQL.(int64)) {
-		_ = begin.Rollback()
-		return errmsg.ErrorOrderCantRush
+		code = errmsg.ErrorOrderCantRush
+		return
 	}
-	// 修改订单状态
-	code = RushOrder(data.Id)
+	// 修改订单状态为加急
+	//code = RushOrder(data.Id)
+	code = UpdateTableItem(ORDERTABLE, data.Id, map[string]interface{}{
+		"status": model.Rush,
+	}, begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	// 修改用户金币
@@ -360,7 +367,6 @@ func RushOrderTrans(data *model.OrderRush) int {
 		"coin": userMoney.(float32) - orderRushMoney.(float32),
 	}, begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 	// 把rush_time提交到表里面去
@@ -368,15 +374,13 @@ func RushOrderTrans(data *model.OrderRush) int {
 		"rush_time": data.RushTime,
 	}, begin)
 	if code != errmsg.SUCCESS {
-		_ = begin.Rollback()
 		return code
 	}
 
 	// 事务结束 commit.
 	err = begin.Commit()
 	if err != nil {
-		_ = begin.Rollback()
-		return errmsg.ErrorSqlTransCommitError
+		code = errmsg.ErrorSqlTransCommitError
 	}
 	return errmsg.SUCCESS
 }
@@ -390,6 +394,16 @@ func RushOrder(id int64) int {
 
 // ChangeOrderStatus 修改订单状态 加急->普通,普通->过期
 func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStatus int) (code int) {
+	defer func() {
+		m := fmt.Sprintf("用户 %d 订单 %d 状态变化 %s -> %s", userId, orderId,
+			model.GetOrderStatusNameByCode(originStatus),
+			model.GetOrderStatusNameByCode(targetStatus))
+		if code == errmsg.SUCCESS {
+			logger.Log.Info(m)
+		} else {
+			logger.Log.Error(m, zap.String("errorMsg", errmsg.GetErrMsg(code)))
+		}
+	}()
 	begin, err := utils.DbConn.Begin()
 	//  defer在函数返回后统一判断事务是否需要回滚
 	defer func() {
@@ -469,4 +483,12 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStat
 		return code
 	}
 	return errmsg.SUCCESS
+}
+
+func GetOrderNotCompleted() (int, []map[string]interface{}) {
+	code, res := GetManyTableItemsByWhere(ORDERTABLE,
+		map[string]interface{}{"status": model.Pending},
+		[]string{"id", "user_id", "create_time"},
+	)
+	return code, res
 }

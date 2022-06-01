@@ -21,13 +21,12 @@ type OrderReply struct {
 	AdvisorId int64   `structs:"advisor_id" json:"advisorId"`
 	Reply     string  `structs:"reply" json:"reply" validate:"min=1200,max=5000"`
 	Coin      float32 `structs:"coin" json:"coin" validate:""`
-	RushCoin  float32
-	Status    int64
+	RushCoin  float32 `json:"rushCoin"`
+	Status    int64   `json:"status"`
 }
 type OrderRush struct {
-	Id       int64 `struct:"id" json:"orderId" validate:"min=1"`
-	UserId   int64 `struct:"user_id"`
-	RushTime int64
-	CronId   int
-	Status   int64
+	Id       int64 `struct:"id" json:"orderId"`
+	UserId   int64 `struct:"user_id" json:"userId"`
+	RushTime int64 `json:"rushTime"`
+	Status   int64 `json:"status"`
 }
