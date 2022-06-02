@@ -21,8 +21,9 @@ var (
 	ErrorLog   string
 	WarnLog    string
 
-	RushOrderCost         float32
-	RushOrder2PendingTime int64
+	RushOrderCost           float32
+	RushOrder2PendingTime   int64
+	PendingOrder2ExpireTime int64
 )
 
 func init() {
@@ -74,4 +75,5 @@ func LoadLogger(file *ini.File) {
 func LoadServiceLogger(file *ini.File) {
 	RushOrderCost = float32(file.Section("service").Key("RushOrderCost").MustFloat64(0.5))
 	RushOrder2PendingTime = file.Section("service").Key("RushOrder2PendingTime").MustInt64(10)
+	PendingOrder2ExpireTime = file.Section("service").Key("PendingOrder2ExpireTime").MustInt64(24 * 60)
 }

@@ -258,33 +258,6 @@ func AddRushCoin2Advisor(data *model.OrderReply, tx *sql.Tx) int {
 	return errmsg.SUCCESS
 }
 
-// replyOrder 回复订单
-func replyOrder(data *model.OrderReply, tx *sql.Tx) int {
-	// 回复订单后为顾问增加金币
-	where := map[string]interface{}{
-		"id": data.Id,
-	}
-	update := map[string]interface{}{
-		"reply": data.Reply,
-	}
-	cond, values, err := qb.BuildUpdate(ORDERTABLE, where, update)
-	if err != nil {
-		logger.GendryBuildError("replyOrder", err, "cond", cond, "values", values)
-		return errmsg.ErrorSqlBuild
-	}
-	row, err := tx.Exec(cond, values...)
-	if err != nil {
-		logger.SqlError("replyOrder", "update", err, "cond", cond)
-		return errmsg.ErrorMysql
-	}
-	affects, _ := row.RowsAffected()
-	if affects != 1 {
-		logger.Log.Error("修改订单回复", zap.Int64("order_id", data.Id))
-		return errmsg.ErrorAffectsNotOne
-	}
-	return errmsg.SUCCESS
-}
-
 // ModifyOrderStatus 修改订单的状态
 func ModifyOrderStatus(data *model.OrderReply, status int, tx *sql.Tx) int {
 	where := map[string]interface{}{
@@ -385,13 +358,6 @@ func RushOrderTrans(data *model.OrderRush) (code int) {
 	return errmsg.SUCCESS
 }
 
-// RushOrder 订单加急
-func RushOrder(id int64) int {
-	orderId := model.Rush
-	code := ModifyOrderStatus(&model.OrderReply{Id: id}, orderId, nil)
-	return code
-}
-
 // ChangeOrderStatus 修改订单状态 加急->普通,普通->过期
 func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStatus int) (code int) {
 	defer func() {
@@ -483,12 +449,4 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStat
 		return code
 	}
 	return errmsg.SUCCESS
-}
-
-func GetOrderNotCompleted() (int, []map[string]interface{}) {
-	code, res := GetManyTableItemsByWhere(ORDERTABLE,
-		map[string]interface{}{"status": model.Pending},
-		[]string{"id", "user_id", "create_time"},
-	)
-	return code, res
 }

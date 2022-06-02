@@ -2,13 +2,21 @@ package validator
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"reflect"
 	"service/utils/errmsg"
+	"service/utils/logger"
 )
 
 func CallFunc(m map[string]interface{}, name string, params ...interface{}) (string, int) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+			logger.Log.Error("反射校验字段panic", zap.String("errorMsg", fmt.Sprintf("%v", err)))
+		}
+	}()
 	if m[name] == nil {
-		return fmt.Sprintf("不存在字段%s校验函数", name), errmsg.ERROR
+		return fmt.Sprintf("不存在字段%s校验函数", name), errmsg.ErrorInput
 	}
 	f := reflect.ValueOf(m[name])
 	in := make([]reflect.Value, len(params))
@@ -20,7 +28,7 @@ func CallFunc(m map[string]interface{}, name string, params ...interface{}) (str
 	return result[0].String(), int(result[1].Int())
 }
 
-// 校验函数模板
+// Name 校验函数模板
 //func XXXX(value interface{}) (errMsg string, errCode int) {
 //	type t struct {
 //		XXXX string `validate:"XXXX"`
@@ -34,9 +42,7 @@ func Name(value interface{}) (errMsg string, errCode int) {
 	return Validate(t{Name: value.(string)})
 }
 func Phone(value interface{}) (errMsg string, errCode int) {
-	if len(value.(string)) != 11 {
-		return "手机号的长度不等于11", errmsg.ERROR
-	}
+
 	type t struct {
 		Phone string `validate:"required,number,len=11"`
 	}
@@ -63,13 +69,19 @@ func Bio(value interface{}) (errMsg string, errCode int) {
 }
 func About(value interface{}) (errMsg string, errCode int) {
 	type t struct {
-		about string `validate:""`
+		About string `validate:""`
 	}
-	return Validate(t{about: value.(string)})
+	return Validate(t{About: value.(string)})
 }
 func WorkExperience(value interface{}) (string, int) {
 	type t struct {
-		num int `validate:"number,get=0"`
+		Num int `validate:"number,gte=0"`
 	}
-	return Validate(t{num: value.(int)})
+	return Validate(t{Num: value.(int)})
+}
+func CoinFunc(value interface{}) (string, int) {
+	type t struct {
+		Coin float64 `validate:"required,gte=0"`
+	}
+	return Validate(t{Coin: value.(float64)})
 }

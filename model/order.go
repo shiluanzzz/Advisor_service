@@ -1,8 +1,8 @@
 package model
 
 type Order struct {
-	Id         int64   `structs:"id" json:"id"`
-	UserId     int64   `structs:"user_id" json:"userId" validate:"required,number"`
+	Id         int64   `structs:"id" json:"orderId"`
+	UserId     int64   `structs:"user_id" json:"userId" validate:"number"`
 	ServiceId  int64   `structs:"service_id" json:"serviceId" validate:"required,number"`
 	AdvisorId  int64   `structs:"advisor_id" json:"advisorId" validate:"required,number"`
 	Situation  string  `structs:"situation" json:"situation" validate:"required,max=3000"`

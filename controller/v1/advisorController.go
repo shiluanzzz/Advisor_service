@@ -47,7 +47,6 @@ func NewAdvisorController(ctx *gin.Context) {
 	return
 }
 func UpdateAdvisorController(ctx *gin.Context) {
-
 	var data map[string]interface{}
 	var code int
 	var msg string
@@ -61,7 +60,7 @@ func UpdateAdvisorController(ctx *gin.Context) {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
 		}
-		commonReturn(ctx, code, msg, data)
+		commonReturn(ctx, code, msg, TransformData(data))
 	}()
 
 	// 数据校验 将不同的字段绑定到不同的校验函数中，使用反射做校验
@@ -77,16 +76,19 @@ func UpdateAdvisorController(ctx *gin.Context) {
 		// 判断是否传的都是字符类型 手机号码传数字会被识别为float不好处理
 		// json中的字符被识别为float
 		if key == "phone" {
-			if reflect.TypeOf(value).Kind() == reflect.TypeOf(float32(1.0)).Kind() {
+			if reflect.TypeOf(value).Kind() == reflect.TypeOf(1.0).Kind() {
 				value = strconv.FormatFloat(value.(float64), 'f', 0, 64)
+				data[key] = value
 			}
 		}
 		if key == "workExperience" {
-			if reflect.TypeOf(value).Kind() != reflect.TypeOf(float32(1.0)).Kind() {
+			if reflect.TypeOf(value).Kind() != reflect.TypeOf(1.0).Kind() {
 				code = errmsg.ErrorInput
+				msg = "请检查workExperience字段的输入"
 				return
 			}
 			value = int(value.(float64))
+			data[key] = value
 		}
 		msg, code = validator.CallFunc(validateFunc, key, value)
 		if code != errmsg.SUCCESS {

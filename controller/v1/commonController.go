@@ -26,15 +26,6 @@ func commonReturn(ctx *gin.Context, code int, msg string, data interface{}) {
 	return
 }
 
-//func commonDefer(ctx *gin.Context, funcName string, code *int, msg *string, data interface{}) {
-//	defer func() {
-//		if *code != errmsg.SUCCESS {
-//			logger.Log.Warn(errmsg.GetErrMsg(*code), zap.String("func", funcName))
-//		}
-//		commonReturn(ctx, *code, *msg, data)
-//	}()
-//}
-
 // ginBindError gin绑定数据的error 返回
 func ginBindError(ctx *gin.Context, err error, funcName string, data interface{}) {
 	code := errmsg.ErrorGinBind

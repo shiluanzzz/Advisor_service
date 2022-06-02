@@ -30,13 +30,13 @@ func NewService(advisorId int64, tx *sql.Tx) int {
 	}
 	cond, values, err := qb.BuildInsert(SERVICETABLE, data)
 	if err != nil {
-		logger.GendryBuildError("NewService", err)
+		logger.GendryBuildError("NewService", err, "cond", cond, "values", values)
 		return errmsg.ErrorSqlBuild
 	}
 	// 执行sql语句
 	_, err = tx.Exec(cond, values...)
 	if err != nil {
-		logger.SqlError("NewService", "Insert", err)
+		logger.SqlError("NewService", "Insert", err, "cond", cond, "values", values)
 		return errmsg.ErrorSqlBuild
 	}
 	return errmsg.SUCCESS
@@ -53,12 +53,12 @@ func ModifyServicePrice(advisorId int64, serviceId int, price float32) int {
 	}
 	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
-		logger.GendryBuildError("ModifyServicePrice", err)
+		logger.GendryBuildError("ModifyServicePrice", err, "cond", cond, "values", values)
 		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
-		logger.SqlError("ModifyServicePrice", "Modify", err)
+		logger.SqlError("ModifyServicePrice", "Modify", err, "cond", cond, "values", values)
 		return errmsg.ErrorMysql
 	}
 	return errmsg.SUCCESS
@@ -75,12 +75,12 @@ func ModifyServiceStatus(advisorId int64, serviceId int, newStatus int) int {
 	}
 	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
-		logger.GendryBuildError("ModifyServiceStatus", err)
+		logger.GendryBuildError("ModifyServiceStatus", err, "cond", cond, "values", values)
 		return errmsg.ErrorSqlBuild
 	}
 	_, err = utils.DbConn.Exec(cond, values...)
 	if err != nil {
-		logger.SqlError("ModifyServiceStatus", "update", err)
+		logger.SqlError("ModifyServiceStatus", "update", err, "cond", cond, "values", values)
 		return errmsg.ErrorMysql
 	}
 	return errmsg.SUCCESS
@@ -92,27 +92,20 @@ func GetAdvisorService(id int64) (int, []map[string]interface{}) {
 		"status":     1,
 	}
 	selects := []string{"*"}
-	//selects := []string{"id", "service_name", "service_id", "price"}
 	cond, values, err := qb.BuildSelect(SERVICETABLE, where, selects)
 	if err != nil {
-		logger.GendryBuildError("GetAdvisorService", err)
+		logger.GendryBuildError("GetAdvisorService", err, "cond", cond, "values", values)
 		return errmsg.ErrorSqlBuild, nil
 	}
 	rows, err := utils.DbConn.Query(cond, values...)
 	if err != nil {
-		logger.SqlError("GetAdvisorService", "select", err)
+		logger.SqlError("GetAdvisorService", "select", err, "cond", cond, "values", values)
 		return errmsg.ErrorMysql, nil
 	}
 	res, err := scanner.ScanMapDecodeClose(rows)
 	if err != nil {
-		logger.GendryBuildError("GetAdvisorService", err)
+		logger.GendryScannerError("GetAdvisorService", err, "cond", cond, "values", values)
 		return errmsg.ErrorSqlBuild, nil
 	}
 	return errmsg.SUCCESS, res
 }
-
-//func GetAdvisorServicePrice(serviceId int64) (int, float64) {
-//	where := map[string]interface{}{
-//		"id": serviceId,
-//	}
-//}

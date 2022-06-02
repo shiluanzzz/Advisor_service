@@ -69,6 +69,19 @@ func CheckToken(token string) (*MyClaims, int) {
 		return nil, errmsg.ErrorTokenWokenWrong
 	}
 }
+func RoleValidate(targetRole string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.GetString("role") != targetRole {
+			code := errmsg.ErrorTokenRoleNotMatch
+			c.JSON(http.StatusOK, gin.H{
+				"code": code,
+				"msg":  errmsg.GetErrMsg(code),
+			})
+			c.Abort()
+			return
+		}
+	}
+}
 
 // JwtToken jwt中间件
 // 定义一个gin的中间件

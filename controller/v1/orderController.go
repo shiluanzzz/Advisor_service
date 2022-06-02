@@ -145,20 +145,36 @@ func GetOrderListController(ctx *gin.Context) {
 func GetOrderDetailController(ctx *gin.Context) {
 	idString := ctx.Param("id")
 	id, err := strconv.Atoi(idString)
+	var code int
+	var msg string
+	var data map[string]interface{}
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn(errmsg.GetErrMsg(code))
+		}
+		commonReturn(ctx, code, msg, TransformData(data))
+	}()
 	if err != nil || id < 1 {
-		commonReturn(ctx, errmsg.ErrorInput, "", map[string]string{"id": idString})
+		code = errmsg.ErrorInput
+		data = map[string]interface{}{"id": idString}
 		return
 	}
 	// 是不是你的订单
-	// 获取基础的订单信息
-	code, base := service.GetManyTableItemsById(service.ORDERTABLE, int64(id), []string{"*"})
+	code, advisorIdInSQL := service.GetTableItem(service.ORDERTABLE, int64(id), "advisor_id")
 	if code != errmsg.SUCCESS {
-		commonReturn(ctx, code, "", base)
+		return
+	}
+	if advisorIdInSQL.(int64) != ctx.GetInt64("id") {
+		code = errmsg.ErrorServiceIdNotMatchWithAdvisorID
+		return
+	}
+	// 获取基础的订单信息
+	code, data = service.GetManyTableItemsById(service.ORDERTABLE, int64(id), []string{"*"})
+	if code != errmsg.SUCCESS {
 		return
 	}
 	//在基础的信息上扩充用户的姓名、出生日期、和性别等相关信息
-	//code, userInfo := service.GetUserInfo(base["user_id"].(int64))
-	code, userInfo := service.GetManyTableItemsById(service.USERTABLE, base["user_id"].(int64), []string{"*"})
+	code, userInfo := service.GetManyTableItemsById(service.USERTABLE, data["user_id"].(int64), []string{"*"})
 	// 转化生日格式
 	if code == errmsg.SUCCESS {
 		birth := userInfo["birth"].(string)
@@ -168,9 +184,10 @@ func GetOrderDetailController(ctx *gin.Context) {
 				userInfo["birthShow"] = birthTime.Format("Jan 02,2006")
 			}
 		}
+		delete(userInfo, "password")
 	}
-	base["userInfo"] = TransformData(userInfo)
-	commonReturn(ctx, code, "", TransformData(base))
+	data["userInfo"] = TransformData(userInfo)
+	return
 }
 
 func OrderReplyController(ctx *gin.Context) {

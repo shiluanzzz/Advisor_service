@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+const (
+	RushOrderType = iota
+	PendingOrderType
+)
+
 // CronJob 定时job主体
 type CronJob struct {
 	OrderId    int64
@@ -22,11 +27,6 @@ type CronJob struct {
 	// CronType=0 rush->pending =1:pending->expired
 	CronType int
 }
-
-const (
-	RushOrderType = iota
-	PendingOrderType
-)
 
 // Run 定时任务的运行逻辑
 func (order *CronJob) Run() {
@@ -41,17 +41,17 @@ func (order *CronJob) Run() {
 			if code == errmsg.ErrorOrderHasCompleted || code == errmsg.SUCCESS {
 				CloseJob(order)
 			} else {
-				logger.Log.Error("定时任务0执行失败,", zap.String("errmsg", errmsg.GetErrMsg(code)))
+				logger.Log.Error("定时任务0执行失败,", zap.String("errorMsg", errmsg.GetErrMsg(code)))
 			}
 		}
 	case PendingOrderType:
-		if now-order.CreateTime > 60*60*24 {
+		if now-order.CreateTime > utils.PendingOrder2ExpireTime*60 {
 			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Pending, model.Expired)
 			if code == errmsg.SUCCESS {
 				CloseJob(order)
 			} else {
-				logger.Log.Error("定时任务1执行失败,", zap.String("errmsg", errmsg.GetErrMsg(code)))
+				logger.Log.Error("定时任务1执行失败,", zap.String("errorMsg", errmsg.GetErrMsg(code)))
 			}
 		}
 	}
@@ -72,6 +72,8 @@ func InitCronJob() {
 	go recoverJobs()
 
 }
+
+// AddJob 往cron中添加定时任务
 func AddJob(job *CronJob) int {
 	jobId, err := C.AddJob("@every 1m", job)
 	logMsg := fmt.Sprintf("创建定时任务%d", job.CronType)
@@ -85,10 +87,14 @@ func AddJob(job *CronJob) int {
 		return errmsg.SUCCESS
 	}
 }
+
+// CloseJob 关闭cron中的定时任务
 func CloseJob(job *CronJob) {
 	// 只负责结束job，状态的查询放在service的事务里去做
 	closeJobChan <- *job
 }
+
+// closeTask 单开一个协程去关闭掉cron中的任务
 func closeTask(c *cron.Cron, closeChan chan CronJob, jobMap *map[int]*CronJob) {
 	for job := range closeChan {
 		logger.Log.Info("关闭定时监控任务",
@@ -99,7 +105,7 @@ func closeTask(c *cron.Cron, closeChan chan CronJob, jobMap *map[int]*CronJob) {
 	}
 }
 
-// 系统异常退出 从数据库重新读取表
+// 系统异常退出 从数据库重新读取表 看有没有需要重新导入表中的写法
 func recoverJobs() {
 	code, res := service.GetManyTableItemsByWhere(service.ORDERTABLE,
 		map[string]interface{}{"status": model.Pending},

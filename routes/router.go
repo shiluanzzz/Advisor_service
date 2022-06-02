@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"service/middleware"
+	"service/service"
 	"service/utils"
 	"service/utils/logger"
 )
@@ -17,7 +18,7 @@ func InitRouter() {
 	{
 		UserRouter.POST("/add", v1.NewUser)
 		UserRouter.GET("/login", v1.UserLogin)
-		UserRouter.Use(middleware.JwtToken())
+		UserRouter.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.USERTABLE))
 		UserRouter.POST("/pwd", v1.UpdateUserPwd)
 		UserRouter.POST("/update", v1.UpdateUserInfoController)
 		UserRouter.POST("/get", v1.GetUserInfo)
@@ -27,10 +28,10 @@ func InitRouter() {
 		AdvisorRouter.POST("/add", v1.NewAdvisorController)
 		AdvisorRouter.GET("/login", v1.AdvisorLogin)
 		AdvisorRouter.GET("/list/:page", v1.GetAdvisorList)
-		AdvisorRouter.Use(middleware.JwtToken())
+		AdvisorRouter.GET("/getInfo", v1.GetAdvisorInfo)
+		AdvisorRouter.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.ADVISORTABLE))
 		AdvisorRouter.POST("/update", v1.UpdateAdvisorController)
 		AdvisorRouter.POST("/pwd", v1.UpdateAdvisorPwd)
-		AdvisorRouter.GET("/getInfo", v1.GetAdvisorInfo)
 		AdvisorRouter.POST("/status", v1.ModifyAdvisorStatus)
 	}
 	Service := r.Group("service")

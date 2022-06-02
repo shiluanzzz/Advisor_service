@@ -15,7 +15,7 @@ type Login struct {
 	Id       int64  `structs:"id" json:"id" form:"id"`
 	Phone    string `structs:"phone" json:"phone" form:"phone" validate:"required,number,len=11"`
 	Password string `structs:"password" json:"password" form:"password" validate:"required,min=6,max=12"`
-	Token    string `structs:"token"`
+	Token    string `structs:"token" json:"token"`
 }
 type ChangePwd struct {
 	//长度限制，新旧密码不能相等

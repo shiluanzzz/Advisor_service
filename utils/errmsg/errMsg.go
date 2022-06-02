@@ -6,6 +6,7 @@ const (
 	//SUCCESS  = iota
 	SUCCESS = 200
 	ERROR   = 400
+
 	// 用户错误状态码
 	ErrorUserphoneUsed  = 1001
 	ErrorPasswordWrong  = 1002
@@ -95,7 +96,7 @@ var errMsg = map[int]string{
 	// 业务相关
 	ErrorOrderMoneyInsufficient:         "金币不足!",
 	ErrorIdNotMatchWithToken:            "用户ID与Token中的不匹配",
-	ErrorServiceIdNotMatchWithAdvisorID: "服务ID与用户ID不匹配",
+	ErrorServiceIdNotMatchWithAdvisorID: "服务ID与顾问ID不匹配",
 	ErrorServiceNotOpen:                 "顾问的这项服务是关闭状态",
 	ErrorServiceName:                    "服务名称与服务器不匹配",
 	ErrorPriceNotMatch:                  "服务价格不匹配，顾问可能修改了价格",

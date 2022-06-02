@@ -73,26 +73,6 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	return errmsg.SUCCESS, res
 }
 
-func ModifyAdvisorStatus(id int64, newStatus int) int {
-	where := map[string]interface{}{
-		"id": id,
-	}
-	updates := map[string]interface{}{
-		"status": newStatus,
-	}
-	cond, values, err := qb.BuildUpdate(ADVISORTABLE, where, updates)
-	if err != nil {
-		logger.GendryBuildError("ModifyAdvisorStatus", err)
-		return errmsg.ErrorSqlBuild
-	}
-	_, err = utils.DbConn.Exec(cond, values...)
-	if err != nil {
-		logger.SqlError("ModifyAdviosrStatus", "update", err)
-		return errmsg.ErrorMysql
-	}
-	return errmsg.SUCCESS
-}
-
 func NewAdvisorAndOrder(data *model.Login) (int, int64) {
 	var code int
 	var id int64

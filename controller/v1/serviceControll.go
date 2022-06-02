@@ -12,7 +12,7 @@ func ModifyServiceStatus(ctx *gin.Context) {
 	type serviceStatus struct {
 		AdvisorId     int64 `json:"advisorId"`
 		ServiceNameId int   `form:"serviceNameId" json:"serviceNameId" validate:"required,number,lte=4"`
-		Status        int   `form:"status" validate:"number,min=0,max=1"`
+		Status        int   `form:"status" json:"status" validate:"number,min=0,max=1"`
 	}
 	var data serviceStatus
 	err := ctx.ShouldBind(&data)
@@ -39,7 +39,7 @@ func ModifyServicePrice(ctx *gin.Context) {
 	type servicePrice struct {
 		AdvisorId int64   `json:"advisorId"`
 		ServiceID int     `form:"serviceNameId" json:"serviceNameId" validate:"required,number,lte=4"`
-		Price     float32 `form:"price" validate:"required,number,gte=1,lte=36"`
+		Price     float32 `form:"price" json:"price" validate:"required,number,gte=1,lte=36"`
 	}
 	var data servicePrice
 	err := ctx.ShouldBind(&data)
