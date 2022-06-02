@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
+	"reflect"
 	"service/middleware"
 	"service/model"
 	"service/service"
@@ -120,4 +121,32 @@ func TransformData(data map[string]interface{}) map[string]interface{} {
 		t[Case2CamelCase(k)] = v
 	}
 	return t
+}
+
+// StructToMap 结构体转为Map[string]interface{},忽略nil指针
+func StructToMap(in interface{}, tagName string) (map[string]interface{}, int) {
+	out := make(map[string]interface{})
+
+	v := reflect.ValueOf(in)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct { // 非结构体返回错误提示
+		return nil, errmsg.ERROR
+	}
+
+	t := v.Type()
+	// 遍历结构体字段
+	// 指定tagName值为map中key;字段值为map中value
+	for i := 0; i < v.NumField(); i++ {
+		fi := t.Field(i)
+		if tagValue := fi.Tag.Get(tagName); tagValue != "" {
+			// 如果这个指向的是一个空指针就不用添加到map里去。
+			if !v.Field(i).IsNil() {
+				out[tagValue] = v.Field(i).Interface()
+			}
+		}
+	}
+	return out, errmsg.SUCCESS
 }

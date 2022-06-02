@@ -13,14 +13,65 @@ import (
 	"strconv"
 )
 
+func UpdateUserInfoControllerV2(ctx *gin.Context) {
+	var data model.UserInfo
+	var code int
+	var msg string
+	var res map[string]interface{}
+	//mapData := make(map[string]interface{}, 8)
+	// 数据绑定,通过结构体绑定数据,如果数据输入不对在这里就会报错return
+	if err := ctx.ShouldBindJSON(&data); err != nil {
+		ginBindError(ctx, err, "UpdateUserInfoController", &data)
+		return
+	}
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn(errmsg.GetErrMsg(code))
+		}
+		commonReturn(ctx, code, msg, data)
+	}()
+	// 将结构体中非nil的字段提取到map中
+	if res, code = StructToMap(data, "structs"); code != errmsg.SUCCESS {
+		return
+	}
+	validateFunc := map[string]interface{}{
+		"name":   validator.Name,
+		"phone":  validator.Phone,
+		"birth":  validator.Birth,
+		"gender": validator.Gender,
+		"bio":    validator.Bio,
+		"about":  validator.About,
+		"coin":   validator.CoinFunc,
+	}
+	for key, value := range res {
+		if msg, code = validator.CallFunc(validateFunc, key, value); code != errmsg.SUCCESS {
+			return
+		}
+	}
+	res["id"] = ctx.GetInt64("id")
+	// 检查手机号是否重复
+	if res["phone"] != nil {
+		code, value := service.GetTableItem(service.USERTABLE, res["id"].(int64), "phone")
+		// 电话号码有变动
+		if fmt.Sprintf("%s", value) != *(res["phone"].(*string)) {
+			code = service.CheckPhoneExist(service.USERTABLE, res["phone"])
+			if code != errmsg.SUCCESS {
+				return
+			}
+		}
+	}
+	// 更新
+	code = service.Update(service.USERTABLE, res)
+	return
+}
+
 func UpdateUserInfoController(ctx *gin.Context) {
 	// 前端传什么后端就更新什么
 	var data map[string]interface{}
 	var code int
 	var msg string
 	// 数据绑定
-	err := ctx.ShouldBindJSON(&data)
-	if err != nil {
+	if err := ctx.ShouldBindJSON(&data); err != nil {
 		ginBindError(ctx, err, "UpdateUserInfoController", &data)
 		return
 	}

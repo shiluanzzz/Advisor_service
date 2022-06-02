@@ -1,14 +1,13 @@
 package model
 
 type UserInfo struct {
-	Id     int64   `structs:"id"     json:"id"`
-	Name   string  `structs:"name"   json:"name"   validate:"min=4,max=20"`
-	Phone  string  `structs:"phone"  json:"phone"  validate:"number,len=11"`
-	Birth  string  `structs:"birth"  json:"birth"  validate:"datetime=02-01-2006"`
-	Gender string  `structs:"gender" json:"gender" validate:"oneof=Female Male 'Not Specified'"`
-	Bio    string  `structs:"bio"    json:"bio"    validate:"max=50"`
-	About  string  `structs:"about"  json:"about"`
-	Coin   float64 `structs:"coin"   json:"coin"   validate:"number"`
+	Name   *string `structs:"name"   json:"name"   validator:"min=4,max=20"`
+	Phone  *string `structs:"phone"  json:"phone"  validator:"number,len=11"`
+	Birth  *string `structs:"birth"  json:"birth"  validator:"datetime=02-01-2006"`
+	Gender *int    `structs:"gender" json:"gender" validator:"min=0,max=2"`
+	Bio    *string `structs:"bio"    json:"bio"    validator:"max=50"`
+	About  *string `structs:"about"  json:"about"`
+	Coin   *int    `structs:"coin"   json:"coin"   validator:"number"`
 }
 
 type Login struct {
