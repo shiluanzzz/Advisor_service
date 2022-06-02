@@ -1,8 +1,8 @@
 package v1
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
-	"reflect"
 	"service/model"
 	"service/service"
 	"service/utils/errmsg"
@@ -46,7 +46,8 @@ func NewAdvisorController(ctx *gin.Context) {
 
 // TODO 修改
 func UpdateAdvisorController(ctx *gin.Context) {
-	var data map[string]interface{}
+	var data model.Advisor
+	var res map[string]interface{}
 	var code int
 	var msg string
 	// 数据绑定
@@ -58,53 +59,41 @@ func UpdateAdvisorController(ctx *gin.Context) {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
 		}
-		commonReturn(ctx, code, msg, TransformData(data))
+		commonReturn(ctx, code, msg, TransformData(res))
 	}()
-
+	// 将结构体中非nil的字段提取到map中
+	if res, code = StructToMap(data, "structs"); code != errmsg.SUCCESS {
+		return
+	}
 	// 数据校验 将不同的字段绑定到不同的校验函数中，使用反射做校验
 	// 不存在的字段在函数中做了检验
 	validateFunc := map[string]interface{}{
-		"name":           validator.Name,
-		"phone":          validator.Phone,
-		"workExperience": validator.WorkExperience,
-		"bio":            validator.Bio,
-		"about":          validator.About,
+		"name":            validator.Name,
+		"phone":           validator.Phone,
+		"work_experience": validator.WorkExperience,
+		"bio":             validator.Bio,
+		"about":           validator.About,
 	}
-	for key, value := range data {
-		// 判断是否传的都是字符类型 手机号码传数字会被识别为float不好处理
-		// json中的字符被识别为float
-		if key == "phone" {
-			if reflect.TypeOf(value).Kind() == reflect.TypeOf(1.0).Kind() {
-				value = strconv.FormatFloat(value.(float64), 'f', 0, 64)
-				data[key] = value
-			}
-		}
-		if key == "workExperience" {
-			if reflect.TypeOf(value).Kind() != reflect.TypeOf(1.0).Kind() {
-				code = errmsg.ErrorInput
-				msg = "请检查workExperience字段的输入"
-				return
-			}
-			value = int(value.(float64))
-			data[key] = value
-		}
+	for key, value := range res {
 		msg, code = validator.CallFunc(validateFunc, key, value)
 		if code != errmsg.SUCCESS {
 			return
 		}
 	}
-	data["id"] = ctx.GetInt64("id")
+	res["id"] = ctx.GetInt64("id")
 	// 检查手机号是否重复
-	if data["phone"] != nil {
-		code = service.CheckPhoneExist(service.USERTABLE, data["phone"])
-		if code != errmsg.SUCCESS {
-			return
+	if res["phone"] != nil {
+		code, value := service.GetTableItem(service.ADVISORTABLE, res["id"].(int64), "phone")
+		// 电话号码有变动
+		if fmt.Sprintf("%s", value) != *(res["phone"].(*string)) {
+			code = service.CheckPhoneExist(service.ADVISORTABLE, res["phone"])
+			if code != errmsg.SUCCESS {
+				return
+			}
 		}
 	}
 	// 更新
-	data["work_experience"] = data["workExperience"]
-	delete(data, "workExperience")
-	code = service.Update(service.ADVISORTABLE, data)
+	code = service.Update(service.ADVISORTABLE, res)
 	return
 }
 
