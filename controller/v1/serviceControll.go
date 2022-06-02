@@ -15,19 +15,16 @@ func ModifyServiceStatus(ctx *gin.Context) {
 		Status        int   `form:"status" json:"status" validate:"number,min=0,max=1"`
 	}
 	var data serviceStatus
-	err := ctx.ShouldBind(&data)
-	if ctx.GetString("role") != service.ADVISORTABLE {
-		commonReturn(ctx, errmsg.ErrorTokenRoleNotMatch, "", data)
-		return
-	}
-	if err != nil {
+	var msg string
+	var code int
+	if err := ctx.ShouldBind(&data); err != nil {
 		ginBindError(ctx, err, "ModifyServiceStatus", data)
 		return
 	}
 	// 数据校验
-	msg, code := validator.Validate(data)
-	data.AdvisorId = ctx.GetInt64("id")
-	if code == errmsg.SUCCESS {
+	if msg, code = validator.Validate(data); code == errmsg.SUCCESS {
+		// 修改状态
+		data.AdvisorId = ctx.GetInt64("id")
 		code = service.ModifyServiceStatus(data.AdvisorId, data.ServiceNameId, data.Status)
 	}
 	commonReturn(ctx, code, msg, data)
@@ -42,19 +39,15 @@ func ModifyServicePrice(ctx *gin.Context) {
 		Price     float32 `form:"price" json:"price" validate:"required,number,gte=1,lte=36"`
 	}
 	var data servicePrice
-	err := ctx.ShouldBind(&data)
-	if ctx.GetString("role") != service.ADVISORTABLE {
-		commonReturn(ctx, errmsg.ErrorTokenRoleNotMatch, "", data)
-		return
-	}
-	data.AdvisorId = ctx.GetInt64("id")
-	if err != nil {
+	var msg string
+	var code int
+	if err := ctx.ShouldBind(&data); err != nil {
 		ginBindError(ctx, err, "ModifyServiceStatus", data)
 		return
 	}
+	data.AdvisorId = ctx.GetInt64("id")
 	// 数据校验
-	msg, code := validator.Validate(data)
-	if code == errmsg.SUCCESS {
+	if msg, code = validator.Validate(data); code == errmsg.SUCCESS {
 		// 修改价格
 		code = service.ModifyServicePrice(data.AdvisorId, data.ServiceID, data.Price)
 	}

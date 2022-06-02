@@ -47,11 +47,6 @@ func NewOrderController(ctx *gin.Context) {
 		return
 	}
 	// ------- 输入数据检查 -------
-	// token role角色校验
-	if ctx.GetString("role") != service.USERTABLE {
-		code = errmsg.ErrorTokenRoleNotMatch
-		return
-	}
 	// user_id 跟 token里的id是否一致
 	if data.UserId == 0 {
 		data.UserId = ctx.GetInt64("id")
@@ -108,11 +103,8 @@ func NewOrderController(ctx *gin.Context) {
 	}
 	return
 }
+
 func GetOrderListController(ctx *gin.Context) {
-	if ctx.GetString("role") != service.ADVISORTABLE {
-		commonReturn(ctx, errmsg.ErrorTokenRoleNotMatch, "", ctx.GetString("role"))
-		return
-	}
 	code, data := service.GetOrderList(ctx.GetInt64("id"))
 	defer func() {
 		if code != errmsg.SUCCESS {
@@ -137,7 +129,7 @@ func GetOrderListController(ctx *gin.Context) {
 			if code != errmsg.SUCCESS {
 				return
 			}
-			v["status_name"] = model.GetOrderStatusNameByCode(int(v["status"].(int64)))
+			v["status_name"] = model.GetOrderStatusNameById(int(v["status"].(int64)))
 		}
 	}
 	return
@@ -148,6 +140,7 @@ func GetOrderDetailController(ctx *gin.Context) {
 	var code int
 	var msg string
 	var data map[string]interface{}
+	// return
 	defer func() {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
@@ -169,48 +162,39 @@ func GetOrderDetailController(ctx *gin.Context) {
 		return
 	}
 	// 获取基础的订单信息
-	code, data = service.GetManyTableItemsById(service.ORDERTABLE, int64(id), []string{"*"})
-	if code != errmsg.SUCCESS {
+	if code, data = service.GetManyTableItemsById(service.ORDERTABLE, int64(id), []string{"*"}); code != errmsg.SUCCESS {
 		return
 	}
 	//在基础的信息上扩充用户的姓名、出生日期、和性别等相关信息
-	code, userInfo := service.GetManyTableItemsById(service.USERTABLE, data["user_id"].(int64), []string{"*"})
+	code, userInfo := service.GetUserInfo(data["user_id"].(int64))
 	// 转化生日格式
 	if code == errmsg.SUCCESS {
 		birth := userInfo["birth"].(string)
-		if birth != "" {
-			birthTime, err := time.Parse("02-01-2006", birth)
-			if err == nil {
-				userInfo["birthShow"] = birthTime.Format("Jan 02,2006")
-			}
+		birthTime, err := time.Parse("02-01-2006", birth)
+		if err == nil {
+			userInfo["birthShow"] = birthTime.Format("Jan 02,2006")
 		}
-		delete(userInfo, "password")
 	}
 	data["userInfo"] = TransformData(userInfo)
 	return
 }
 
 func OrderReplyController(ctx *gin.Context) {
-	// token角色
-	if ctx.GetString("role") != service.ADVISORTABLE {
-		commonReturn(ctx, errmsg.ErrorTokenRoleNotMatch, "", nil)
-		return
-	}
+
 	var data model.OrderReply
 	var code int
-	err := ctx.ShouldBindJSON(&data)
-	if err != nil {
+	var msg string
+	if err := ctx.ShouldBindJSON(&data); err != nil {
 		ginBindError(ctx, err, "orderController.orderReplyController", data)
 		return
 	}
 	//基础校验 回复长度
-	msg, code := validator.Validate(data)
-	if code != errmsg.SUCCESS {
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		commonReturn(ctx, code, msg, data)
 		return
 	}
 
-	// 主逻辑
+	// return
 	defer func() {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
@@ -258,11 +242,7 @@ func RushOrderController(ctx *gin.Context) {
 		}
 		commonReturn(ctx, code, "", data)
 	}()
-	// token role角色校验
-	if ctx.GetString("role") != service.USERTABLE {
-		code = errmsg.ErrorTokenRoleNotMatch
-		return
-	}
+
 	data.UserId = ctx.GetInt64("id")
 	// 是不是自己的订单
 	code, userIdInSQL := service.GetTableItem(service.ORDERTABLE, data.Id, "user_id")
@@ -284,14 +264,13 @@ func RushOrderController(ctx *gin.Context) {
 		RushTime: data.RushTime,
 		CronType: cronjob.RushOrderType,
 	}
-	code = cronjob.AddJob(&job)
-	if code == errmsg.SUCCESS {
-		// 提交到service的事务层
-		code = service.RushOrderTrans(&data)
-		if code != errmsg.SUCCESS {
-			// 如果事务失败,停止定时job
-			cronjob.CloseJob(&job)
-		}
+	if code = cronjob.AddJob(&job); code != errmsg.SUCCESS {
+		return
+	}
+	// 提交到service的事务层
+	if code = service.RushOrderTrans(&data); code != errmsg.SUCCESS {
+		// 如果事务失败,停止定时job
+		cronjob.CloseJob(&job)
 	}
 	return
 }

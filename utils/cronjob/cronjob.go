@@ -30,11 +30,12 @@ type CronJob struct {
 
 // Run 定时任务的运行逻辑
 func (order *CronJob) Run() {
-	now := time.Now().Unix()
+	now := time.Now()
 	// 隔1分钟扫描一次
 	switch order.CronType {
 	case RushOrderType:
-		if now-order.RushTime > utils.RushOrder2PendingTime*60 {
+		runTime := time.Unix(order.RushTime+utils.RushOrder2PendingTime*60, 0)
+		if runTime.After(now) {
 			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Rush, model.Pending)
 			// 这个订单被顾问回答了 或者执行成功了
@@ -45,7 +46,8 @@ func (order *CronJob) Run() {
 			}
 		}
 	case PendingOrderType:
-		if now-order.CreateTime > utils.PendingOrder2ExpireTime*60 {
+		runTime := time.Unix(order.CreateTime+utils.PendingOrder2ExpireTime*60, 0)
+		if runTime.After(now) {
 			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Pending, model.Expired)
 			if code == errmsg.SUCCESS {

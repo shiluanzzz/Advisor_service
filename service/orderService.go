@@ -362,8 +362,8 @@ func RushOrderTrans(data *model.OrderRush) (code int) {
 func ChangeOrderStatus(orderId int64, userId int64, originStatus int, targetStatus int) (code int) {
 	defer func() {
 		m := fmt.Sprintf("用户 %d 订单 %d 状态变化 %s -> %s", userId, orderId,
-			model.GetOrderStatusNameByCode(originStatus),
-			model.GetOrderStatusNameByCode(targetStatus))
+			model.GetOrderStatusNameById(originStatus),
+			model.GetOrderStatusNameById(targetStatus))
 		if code == errmsg.SUCCESS {
 			logger.Log.Info(m)
 		} else {

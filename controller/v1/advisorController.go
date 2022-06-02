@@ -17,8 +17,7 @@ func NewAdvisorController(ctx *gin.Context) {
 	var code int
 	var msg string
 	// 数据绑定
-	err := ctx.ShouldBindJSON(&data)
-	if err != nil {
+	if err := ctx.ShouldBindJSON(&data); err != nil {
 		ginBindError(ctx, err, "NewUser", data)
 		return
 	}
@@ -30,14 +29,12 @@ func NewAdvisorController(ctx *gin.Context) {
 	}()
 
 	// 数据校验
-	msg, code = validator.Validate(data)
-	// 数据不合法
-	if code != errmsg.SUCCESS {
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
+		// 数据不合法
 		return
 	}
 	// 调用service层 检查手机号是否重复
-	code = service.CheckPhoneExist(table, data.Phone)
-	if code == errmsg.SUCCESS {
+	if code = service.CheckPhoneExist(table, data.Phone); code == errmsg.SUCCESS {
 		// 用户密码加密存储
 		data.Password = service.GetPwd(data.Password)
 		// 顾问的创建和服务的创建使用事务统一提交
@@ -46,13 +43,14 @@ func NewAdvisorController(ctx *gin.Context) {
 	// success
 	return
 }
+
+// TODO 修改
 func UpdateAdvisorController(ctx *gin.Context) {
 	var data map[string]interface{}
 	var code int
 	var msg string
 	// 数据绑定
-	err := ctx.ShouldBindJSON(&data)
-	if err != nil {
+	if err := ctx.ShouldBindJSON(&data); err != nil {
 		ginBindError(ctx, err, "UpdateAdvisorController", data)
 		return
 	}
@@ -140,19 +138,30 @@ func GetAdvisorInfo(ctx *gin.Context) {
 		Id int64 `form:"id" validate:"required,min=0"`
 	}
 	var data Num
-	err := ctx.ShouldBindQuery(&data)
-	if err != nil {
+	var serviceData []map[string]interface{}
+	var infoData map[string]interface{}
+	var code int
+	if err := ctx.ShouldBindQuery(&data); err != nil {
 		ginBindError(ctx, err, "GetAdvisorInfo", data)
 	}
-	code, res := service.GetAdvisorInfo(data.Id)
-
-	var serviceData []map[string]interface{}
-	if code == errmsg.SUCCESS {
-		code, serviceData = service.GetAdvisorService(data.Id)
+	// 字段基础校验
+	if msg, code := validator.Validate(data); code != errmsg.SUCCESS {
+		commonReturn(ctx, code, msg, data)
+		return
 	}
+	// 先拿用户的info
+	if code, infoData = service.GetManyTableItemsById(service.ADVISORTABLE, data.Id, []string{"*"}); code == errmsg.SUCCESS {
+		// 在拿用户的服务
+		//code, serviceData = service.GetAdvisorService(data.Id)
+		code, serviceData = service.GetManyTableItemsByWhere(service.ADVISORTABLE,
+			map[string]interface{}{"advisor_id": data.Id, "status": 1},
+			[]string{"*"},
+		)
+	}
+
 	commonReturn(ctx, code, "",
 		map[string]interface{}{
-			"info":    TransformDataSlice(res),
+			"info":    TransformData(infoData),
 			"service": TransformDataSlice(serviceData),
 		},
 	)
@@ -164,13 +173,9 @@ func ModifyAdvisorStatus(ctx *gin.Context) {
 	var msg string
 	var data model.ServiceState
 
-	err := ctx.ShouldBind(&data)
-	if err != nil {
+	if err := ctx.ShouldBind(&data); err != nil {
 		ginBindError(ctx, err, "ModifyAdvisorStatus", data)
 		return
-	}
-	if ctx.GetString("role") != service.ADVISORTABLE {
-		code = errmsg.ErrorTokenRoleNotMatch
 	}
 	data.Id = ctx.GetInt64("id")
 
@@ -182,11 +187,11 @@ func ModifyAdvisorStatus(ctx *gin.Context) {
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 输入校验后执行业务逻辑
-	msg, code = validator.Validate(data)
-	if code == errmsg.SUCCESS {
-		code = service.UpdateTableItem(service.ADVISORTABLE, data.Id, map[string]interface{}{
-			"status": data.Status,
-		})
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
+		return
 	}
+	// 更新
+	code = service.UpdateTableItem(service.ADVISORTABLE, data.Id,
+		map[string]interface{}{"status": data.Status})
 	return
 }

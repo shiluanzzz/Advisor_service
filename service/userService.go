@@ -69,3 +69,15 @@ func GetId(table, phone string) (id int64, errCode int) {
 		return res, errmsg.SUCCESS
 	}
 }
+
+// GetUserInfo 对查询用户信息的方法再次封装，补充消息
+func GetUserInfo(id int64) (int, map[string]interface{}) {
+	code, data := GetManyTableItemsById(USERTABLE, id, []string{"*"})
+	delete(data, "password")
+	if gender, ok := data["gender"].(int64); ok {
+		data["genderShow"] = model.GetGenderNameById(int(gender))
+	} else {
+		logger.Log.Error("从数据库中查出的gender转int失败")
+	}
+	return code, data
+}

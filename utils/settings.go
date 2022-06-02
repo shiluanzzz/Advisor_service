@@ -72,6 +72,8 @@ func LoadLogger(file *ini.File) {
 	ErrorLog = file.Section("logger").Key("ErrorLog").MustString("./error.log")
 	WarnLog = file.Section("logger").Key("WarnLog").MustString("./warn.log")
 }
+
+// LoadServiceLogger 读取定时任务相关的配置文件
 func LoadServiceLogger(file *ini.File) {
 	RushOrderCost = float32(file.Section("service").Key("RushOrderCost").MustFloat64(0.5))
 	RushOrder2PendingTime = file.Section("service").Key("RushOrder2PendingTime").MustInt64(10)

@@ -6,20 +6,26 @@ const (
 	//SUCCESS  = iota
 	SUCCESS = 200
 	ERROR   = 400
+)
 
-	// 用户错误状态码
-	ErrorUserphoneUsed  = 1001
+// 用户错误状态码
+const (
+	ErrorUserPhoneUsed  = 1001
 	ErrorPasswordWrong  = 1002
 	ErrorUserNotExist   = 1003
 	ErrorUsernameModify = 1004
+)
 
-	// 输入错误
+// 输入错误
+const (
 	ErrorInput           = 1005
 	ErrorUpdateValid     = 1006
 	ErrorPhoneInput      = 1007
 	ErrorAdvisorNotExist = 1008
+)
 
-	// 服务器内部错误,SQL编译等
+// 服务器内部错误,SQL编译等
+const (
 	ErrorSqlBuild             = 2001
 	ErrorMysql                = 2002
 	ErrorNotImplement         = 2003
@@ -28,7 +34,10 @@ const (
 	ErrorSqlTransError        = 2006
 	ErrorSqlTransCommitError  = 2007
 	ErrorSqlSingleSelectError = 2008
-	// TOKEN相关错误
+)
+
+// TOKEN相关错误
+const (
 	ErrorTokenNotExist     = 3001
 	ErrorTokenTimeOut      = 3002
 	ErrorTokenWokenWrong   = 3003
@@ -36,12 +45,16 @@ const (
 	ErrorTokenIdNotExist   = 3005
 	ErrorTokenRoleNotExist = 3006
 	ErrorTokenRoleNotMatch = 3007
+)
 
-	// service
+// service
+const (
 	ErrorServiceNotExist = 4001
 	ErrorServiceExist    = 4002
+)
 
-	// 业务相关
+// 业务相关
+const (
 	ErrorOrderMoneyInsufficient         = 5001
 	ErrorIdNotMatchWithToken            = 5002
 	ErrorServiceIdNotMatchWithAdvisorID = 5003
@@ -54,8 +67,10 @@ const (
 	ErrorNoResult                       = 5010
 	ErrorOrderHasCompleted              = 5011
 	ErrorOrderCantRush                  = 5012
+)
 
-	// Cron相关
+// Cron相关
+const (
 	ErrorCronAddJob         = 6001
 	ErrorJobStatusNotExpect = 6002
 	ErrorJobStatusConvert   = 6003
@@ -65,7 +80,7 @@ var errMsg = map[int]string{
 	SUCCESS: "成功",
 	ERROR:   "错误",
 	// user
-	ErrorUserphoneUsed:   "手机号已注册！",
+	ErrorUserPhoneUsed:   "手机号已注册！",
 	ErrorPasswordWrong:   "密码错误",
 	ErrorUserNotExist:    "用户不存在",
 	ErrorAdvisorNotExist: "顾问不存在",

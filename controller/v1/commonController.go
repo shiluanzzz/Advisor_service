@@ -32,15 +32,12 @@ func ginBindError(ctx *gin.Context, err error, funcName string, data interface{}
 	logger.Log.Error("gin绑定json错误", zap.Error(err), zap.String("function", funcName))
 	commonReturn(ctx, code, "", data)
 	return
-
 }
 
 // Login 用户或者顾问登录
 func Login(table string, ctx *gin.Context) {
 	var data model.Login
-	err := ctx.ShouldBindQuery(&data)
-	// 数据绑定错误
-	if err != nil {
+	if err := ctx.ShouldBindQuery(&data); err != nil {
 		ginBindError(ctx, err, "Login", &data)
 		return
 	}
@@ -49,7 +46,7 @@ func Login(table string, ctx *gin.Context) {
 	msg, code := validator.Validate(data)
 	// 数据不合法
 	if code != errmsg.SUCCESS {
-		logger.Log.Warn("数据校验非法", zap.Error(err), zap.String("msg", msg))
+		logger.Log.Warn("数据校验非法", zap.String("msg", msg))
 		commonReturn(ctx, code, msg, data)
 		return
 	}
@@ -70,41 +67,41 @@ func Login(table string, ctx *gin.Context) {
 func UpdatePwdController(table string, ctx *gin.Context) {
 	// 拿数据
 	var data model.ChangePwd
-	err := ctx.ShouldBind(&data)
+	var msg string
+	var code int
+	if err := ctx.ShouldBind(&data); err != nil {
+		ginBindError(ctx, err, "UpdatePwdController", data)
+		return
+	}
 	// 数据校验
-	msg, code := validator.Validate(data)
-	id := ctx.GetInt64("id")
-	// 数据不合法
-	if code != errmsg.SUCCESS {
-		logger.Log.Warn("数据校验非法", zap.Error(err))
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		commonReturn(ctx, code, msg, data)
 		return
 	}
-
+	id := ctx.GetInt64("id")
 	// 检查旧密码是否正确
-	code = service.CheckRolePwd(table, id, data.OldPassword)
-
-	if code == errmsg.SUCCESS {
-		// update
+	if code = service.CheckRolePwd(table, id, data.OldPassword); code == errmsg.SUCCESS {
+		// 更新密码
 		code = service.ChangePWD(table, id, data.NewPassword)
 	}
 	logger.Log.Info(fmt.Sprintf("%s 修改密码", table), zap.String("id", strconv.FormatInt(id, 10)))
 	commonReturn(ctx, code, "", data)
 }
 
-func Case2CamelCase(str string) string {
-	str = strings.Replace(str, "_", " ", -1)
-	str = strings.Title(str)
-	str = strings.Replace(str, " ", "", -1)
-	return LowFirst(str)
-}
-
-// LowFirst 首字母小写
+// LowFirst 首字母小写 SomeThing->someThing
 func LowFirst(str string) string {
 	for i, v := range str {
 		return string(unicode.ToLower(v)) + str[i+1:]
 	}
 	return ""
+}
+
+// Case2CamelCase 蛇形转驼峰 some_thing -> someThing
+func Case2CamelCase(str string) string {
+	str = strings.Replace(str, "_", " ", -1)
+	str = strings.Title(str)
+	str = strings.Replace(str, " ", "", -1)
+	return LowFirst(str)
 }
 
 // TransformDataSlice 把数据转换为小驼峰返回
@@ -115,6 +112,8 @@ func TransformDataSlice(data []map[string]interface{}) []map[string]interface{} 
 	}
 	return res
 }
+
+// TransformData 数据的key转化为小驼峰返回
 func TransformData(data map[string]interface{}) map[string]interface{} {
 	t := map[string]interface{}{}
 	for k, v := range data {

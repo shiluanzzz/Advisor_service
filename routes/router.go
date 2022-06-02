@@ -17,11 +17,11 @@ func InitRouter() {
 	UserRouter := r.Group("user")
 	{
 		UserRouter.POST("/add", v1.NewUser)
-		UserRouter.GET("/login", v1.UserLogin)
+		UserRouter.GET("/login", v1.UserLoginController)
 		UserRouter.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.USERTABLE))
 		UserRouter.POST("/pwd", v1.UpdateUserPwd)
 		UserRouter.POST("/update", v1.UpdateUserInfoController)
-		UserRouter.POST("/get", v1.GetUserInfo)
+		UserRouter.POST("/get", v1.GetUserInfoController)
 	}
 	AdvisorRouter := r.Group("advisor")
 	{

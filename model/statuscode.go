@@ -16,9 +16,9 @@ var statusName = map[int]string{
 	Completed: "Completed",
 }
 
-func GetOrderStatusNameByCode(id int) string {
-	if statusName[id] != "" {
-		return statusName[id]
+func GetOrderStatusNameById(id int) string {
+	if res := statusName[id]; res != "" {
+		return res
 	} else {
 		return fmt.Sprintf("状态%d不存在", id)
 	}
@@ -26,5 +26,25 @@ func GetOrderStatusNameByCode(id int) string {
 func GetOrderEnableReplyId() []int {
 	return []int{
 		Rush, Pending,
+	}
+}
+
+const (
+	Unknown = iota
+	Male
+	Female
+)
+
+var genderName = map[int]string{
+	Male:    "Male",
+	Female:  "Female",
+	Unknown: "Not Specified",
+}
+
+func GetGenderNameById(id int) string {
+	if res := genderName[id]; res != "" {
+		return res
+	} else {
+		return fmt.Sprintf("性别%d不存在", id)
 	}
 }

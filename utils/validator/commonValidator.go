@@ -28,60 +28,87 @@ func CallFunc(m map[string]interface{}, name string, params ...interface{}) (str
 	return result[0].String(), int(result[1].Int())
 }
 
-// Name 校验函数模板
-//func XXXX(value interface{}) (errMsg string, errCode int) {
-//	type t struct {
-//		XXXX string `validate:"XXXX"`
-//	}
-//	return Validate(t{XXX: value.(string)})
-//}
+const msg = "数据类型不为 %s"
+
 func Name(value interface{}) (errMsg string, errCode int) {
 	type t struct {
 		Name string `validate:"min=4,max=20"`
 	}
-	return Validate(t{Name: value.(string)})
+	if name, ok := value.(string); ok {
+		return Validate(t{Name: name})
+	} else {
+		return fmt.Sprintf(msg, "string"), errmsg.ErrorInput
+	}
 }
 func Phone(value interface{}) (errMsg string, errCode int) {
 
 	type t struct {
 		Phone string `validate:"required,number,len=11"`
 	}
-	return Validate(t{Phone: value.(string)})
+	if phone, ok := value.(string); ok {
+		return Validate(t{Phone: phone})
+	} else {
+		return fmt.Sprintf(msg, "string"), errmsg.ErrorInput
+	}
 }
 func Birth(value interface{}) (errMsg string, errCode int) {
 	type t struct {
 		Birth string `validate:"datetime=02-01-2006"`
 	}
-	return Validate(t{Birth: value.(string)})
+	if valueTrue, ok := value.(string); ok {
+		return Validate(t{Birth: valueTrue})
+	} else {
+		return fmt.Sprintf(msg, "string"), errmsg.ErrorInput
+	}
 }
 
 func Gender(value interface{}) (errMsg string, errCode int) {
 	type t struct {
-		Gender string `validate:"required,oneof=Female Male 'Not Specified'"`
+		Gender int `validate:"required,number,min=1,max=3"`
 	}
-	return Validate(t{Gender: value.(string)})
+	if valueTrue, ok := value.(float64); ok {
+		return Validate(t{Gender: int(valueTrue)})
+	} else {
+		return fmt.Sprintf(msg, "int"), errmsg.ErrorInput
+	}
 }
 func Bio(value interface{}) (errMsg string, errCode int) {
 	type t struct {
 		Bio string `validate:"max=50"`
 	}
-	return Validate(t{Bio: value.(string)})
+	if valueTrue, ok := value.(string); ok {
+		return Validate(t{Bio: valueTrue})
+	} else {
+		return fmt.Sprintf(msg, "string"), errmsg.ErrorInput
+	}
 }
 func About(value interface{}) (errMsg string, errCode int) {
 	type t struct {
 		About string `validate:""`
 	}
-	return Validate(t{About: value.(string)})
+	if valueTrue, ok := value.(string); ok {
+		return Validate(t{About: valueTrue})
+	} else {
+		return fmt.Sprintf(msg, "string"), errmsg.ErrorInput
+	}
 }
 func WorkExperience(value interface{}) (string, int) {
 	type t struct {
 		Num int `validate:"number,gte=0"`
 	}
-	return Validate(t{Num: value.(int)})
+	if valueTrue, ok := value.(int); ok {
+		return Validate(t{Num: valueTrue})
+	} else {
+		return fmt.Sprintf(msg, "int"), errmsg.ErrorInput
+	}
 }
 func CoinFunc(value interface{}) (string, int) {
 	type t struct {
 		Coin float64 `validate:"required,gte=0"`
 	}
-	return Validate(t{Coin: value.(float64)})
+	if valueTrue, ok := value.(float64); ok {
+		return Validate(t{Coin: valueTrue})
+	} else {
+		return fmt.Sprintf(msg, "int"), errmsg.ErrorInput
+	}
 }

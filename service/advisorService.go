@@ -16,10 +16,6 @@ func GetAdvisorInfo(Id int64) (int, []map[string]interface{}) {
 	where := map[string]interface{}{
 		"id": Id,
 	}
-	//selects := []string{
-	//	"id", "name", "phone", "coin", "total_order_num", "status",
-	//	"rank", "rank_num", "work_experience", "bio", "about",
-	//}
 	selects := []string{"*"}
 	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
 	if err != nil {

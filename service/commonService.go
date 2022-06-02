@@ -44,7 +44,7 @@ func CheckPhoneExist(tableName string, phone interface{}) int {
 		return errmsg.ErrorSqlScanner
 	}
 	if len(res) != 0 {
-		return errmsg.ErrorUserphoneUsed
+		return errmsg.ErrorUserPhoneUsed
 	} else {
 		return errmsg.SUCCESS
 	}
@@ -164,13 +164,13 @@ func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.
 	}
 	var res interface{}
 	var row *sql.Row
+	// 可能是事务调用的
 	if len(tx) != 0 {
 		row = tx[0].QueryRow(cond, values...)
 	} else {
 		row = utils.DbConn.QueryRow(cond, values...)
 	}
-	err = row.Scan(&res)
-	if err != nil {
+	if err = row.Scan(&res); err != nil {
 		logger.Log.Error(fmt.Sprintf("无法从表%s根据%d匹配到%s字段,请检查。", tableName, tableId, fieldName), zap.Error(err))
 		return errmsg.ErrorMysql, nil
 	}

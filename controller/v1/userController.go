@@ -108,22 +108,14 @@ func UpdateUserPwd(ctx *gin.Context) {
 	UpdatePwdController(service.USERTABLE, ctx)
 }
 
-// UserLogin 用户登录
-func UserLogin(ctx *gin.Context) {
+// UserLoginController 用户登录
+func UserLoginController(ctx *gin.Context) {
 	Login(service.USERTABLE, ctx)
 }
 
-func GetUserInfo(ctx *gin.Context) {
-	var code int
-	var data map[string]interface{}
-	if ctx.GetString("role") == service.USERTABLE {
-		//这个username 是token鉴权成功后写入到请求中的
-		id := ctx.GetInt64("id")
-		code, data = service.GetManyTableItemsById(service.USERTABLE, id, []string{"*"})
-	} else {
-		code = errmsg.ErrorTokenRoleNotMatch
-	}
-	delete(data, "password")
+func GetUserInfoController(ctx *gin.Context) {
+	id := ctx.GetInt64("id")
+	code, data := service.GetUserInfo(id)
 	commonReturn(ctx, code, "", data)
 	return
 }
