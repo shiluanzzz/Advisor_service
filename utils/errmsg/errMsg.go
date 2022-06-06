@@ -8,72 +8,69 @@ const (
 	ERROR   = 400
 )
 
-// 用户错误状态码
+// 注册、输入相关错误
 const (
-	ErrorUserPhoneUsed  = 1001
-	ErrorPasswordWrong  = 1002
-	ErrorUserNotExist   = 1003
-	ErrorUsernameModify = 1004
-)
-
-// 输入错误
-const (
-	ErrorInput           = 1005
-	ErrorUpdateValid     = 1006
-	ErrorPhoneInput      = 1007
-	ErrorAdvisorNotExist = 1008
+	ErrorUserPhoneUsed = iota + 1001
+	ErrorPasswordWrong
+	ErrorUserNotExist
+	ErrorInput
+	ErrorUpdateValid
+	ErrorAdvisorNotExist
 )
 
 // 服务器内部错误,SQL编译等
 const (
-	ErrorSqlBuild             = 2001
-	ErrorMysql                = 2002
-	ErrorNotImplement         = 2003
-	ErrorGinBind              = 2004
-	ErrorSqlScanner           = 2005
-	ErrorSqlTransError        = 2006
-	ErrorSqlTransCommitError  = 2007
-	ErrorSqlSingleSelectError = 2008
+	ErrorSqlBuild = iota + 2001
+	ErrorMysql
+	ErrorNotImplement
+	ErrorGinBind
+	ErrorSqlScanner
+	ErrorSqlTransError
+	ErrorSqlTransCommitError
+	ErrorSqlSingleSelectError
 )
 
 // TOKEN相关错误
 const (
-	ErrorTokenNotExist     = 3001
-	ErrorTokenTimeOut      = 3002
-	ErrorTokenWokenWrong   = 3003
-	ErrorTokenTypeWrong    = 3004
-	ErrorTokenIdNotExist   = 3005
-	ErrorTokenRoleNotExist = 3006
-	ErrorTokenRoleNotMatch = 3007
+	ErrorTokenNotExist = iota + 3001
+	ErrorTokenTimeOut
+	ErrorTokenWokenWrong
+	ErrorTokenTypeWrong
+	ErrorTokenIdNotExist
+	ErrorTokenRoleNotExist
+	ErrorTokenRoleNotMatch
 )
 
 // service
 const (
-	ErrorServiceNotExist = 4001
-	ErrorServiceExist    = 4002
+	ErrorServiceNotExist = iota + 4001
+	ErrorServiceExist
 )
 
 // 业务相关
 const (
-	ErrorOrderMoneyInsufficient         = 5001
-	ErrorIdNotMatchWithToken            = 5002
-	ErrorServiceIdNotMatchWithAdvisorID = 5003
-	ErrorServiceNotOpen                 = 5004
-	ErrorServiceName                    = 5005
-	ErrorPriceNotMatch                  = 5006
-	ErrorServiceStatusNotExist          = 5007
-	ErrorAffectsNotOne                  = 5008
-	ErrorRowNotExpect                   = 5009
-	ErrorNoResult                       = 5010
-	ErrorOrderHasCompleted              = 5011
-	ErrorOrderCantRush                  = 5012
+	ErrorOrderMoneyInsufficient = iota + 5001
+	ErrorIdNotMatchWithToken
+	ErrorServiceIdNotMatchWithAdvisorID
+	ErrorServiceNotOpen
+	ErrorServiceName
+	ErrorPriceNotMatch
+	ErrorServiceStatusNotExist
+	ErrorAffectsNotOne
+	ErrorRowNotExpect
+	ErrorNoResult
+	ErrorOrderHasCompleted
+	ErrorOrderCantRush
+	ErrorOrderIdNotMatchWithAdvisorID
+	ErrorOrderIdNotMatchWithUserID
+	ErrorOrderCantComment
 )
 
 // Cron相关
 const (
-	ErrorCronAddJob         = 6001
-	ErrorJobStatusNotExpect = 6002
-	ErrorJobStatusConvert   = 6003
+	ErrorCronAddJob = iota + 6001
+	ErrorJobStatusNotExpect
+	ErrorJobStatusConvert
 )
 
 var errMsg = map[int]string{
@@ -84,10 +81,8 @@ var errMsg = map[int]string{
 	ErrorPasswordWrong:   "密码错误",
 	ErrorUserNotExist:    "用户不存在",
 	ErrorAdvisorNotExist: "顾问不存在",
-	ErrorUsernameModify:  "不允许修改用户名!",
 	ErrorInput:           "输入不符合要求!",
 	ErrorUpdateValid:     "不允许直接更新Coin或密码字段",
-	ErrorPhoneInput:      "手机号字段请传字符串,会被识别成float64",
 	//服务器内部错误
 	ErrorSqlBuild:             "gendry库SQL编译错误",
 	ErrorMysql:                "数据库操作错误",
@@ -121,6 +116,9 @@ var errMsg = map[int]string{
 	ErrorNoResult:                       "无此查询结果,请检查输入",
 	ErrorOrderHasCompleted:              "订单已经完成啦！",
 	ErrorOrderCantRush:                  "订单不可加急",
+	ErrorOrderIdNotMatchWithAdvisorID:   "订单ID与顾问ID不匹配",
+	ErrorOrderIdNotMatchWithUserID:      "订单ID与用户ID不匹配",
+	ErrorOrderCantComment:               "该订单不可评论",
 
 	//定时任务相关
 	ErrorCronAddJob:         "cron创建定时任务失败",
