@@ -35,7 +35,7 @@ func (order *CronJob) Run() {
 	switch order.CronType {
 	case RushOrderType:
 		runTime := time.Unix(order.RushTime+utils.RushOrder2PendingTime*60, 0)
-		if runTime.After(now) {
+		if now.After(runTime) {
 			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Rush, model.Pending)
 			// 这个订单被顾问回答了 或者执行成功了
@@ -47,7 +47,7 @@ func (order *CronJob) Run() {
 		}
 	case PendingOrderType:
 		runTime := time.Unix(order.CreateTime+utils.PendingOrder2ExpireTime*60, 0)
-		if runTime.After(now) {
+		if now.After(runTime) {
 			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Pending, model.Expired)
 			if code == errmsg.SUCCESS {
@@ -125,6 +125,7 @@ func recoverJobs() {
 				CronType:   PendingOrderType,
 			}
 			_ = AddJob(&job)
+			job.Run()
 		}
 	}
 
@@ -144,6 +145,7 @@ func recoverJobs() {
 				CronType:   RushOrderType,
 			}
 			_ = AddJob(&job)
+			job.Run()
 		}
 	}
 }
