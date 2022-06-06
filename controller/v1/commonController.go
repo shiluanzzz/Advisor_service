@@ -5,7 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
-	"reflect"
 	"service/middleware"
 	"service/model"
 	"service/service"
@@ -13,8 +12,6 @@ import (
 	"service/utils/logger"
 	"service/utils/validator"
 	"strconv"
-	"strings"
-	"unicode"
 )
 
 // 统一的gin 数据返回格式
@@ -87,66 +84,4 @@ func UpdatePwdController(table string, ctx *gin.Context) {
 	}
 	logger.Log.Info(fmt.Sprintf("%s 修改密码", table), zap.String("id", strconv.FormatInt(id, 10)))
 	commonReturn(ctx, code, "", data)
-}
-
-// LowFirst 首字母小写 SomeThing->someThing
-func LowFirst(str string) string {
-	for i, v := range str {
-		return string(unicode.ToLower(v)) + str[i+1:]
-	}
-	return ""
-}
-
-// Case2CamelCase 蛇形转驼峰 some_thing -> someThing
-func Case2CamelCase(str string) string {
-	str = strings.Replace(str, "_", " ", -1)
-	str = strings.Title(str)
-	str = strings.Replace(str, " ", "", -1)
-	return LowFirst(str)
-}
-
-// TransformDataSlice 把数据转换为小驼峰返回
-func TransformDataSlice(data []map[string]interface{}) []map[string]interface{} {
-	var res []map[string]interface{}
-	for _, each := range data {
-		res = append(res, TransformData(each))
-	}
-	return res
-}
-
-// TransformData 数据的key转化为小驼峰返回
-func TransformData(data map[string]interface{}) map[string]interface{} {
-	t := map[string]interface{}{}
-	for k, v := range data {
-		t[Case2CamelCase(k)] = v
-	}
-	return t
-}
-
-// StructToMap 结构体转为Map[string]interface{},忽略nil指针
-func StructToMap(in interface{}, tagName string) (map[string]interface{}, int) {
-	out := make(map[string]interface{})
-
-	v := reflect.ValueOf(in)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-
-	if v.Kind() != reflect.Struct { // 非结构体返回错误提示
-		return nil, errmsg.ERROR
-	}
-
-	t := v.Type()
-	// 遍历结构体字段
-	// 指定tagName值为map中key;字段值为map中value
-	for i := 0; i < v.NumField(); i++ {
-		fi := t.Field(i)
-		if tagValue := fi.Tag.Get(tagName); tagValue != "" {
-			// 如果这个指向的是一个空指针就不用添加到map里去。
-			if !v.Field(i).IsNil() {
-				out[tagValue] = v.Field(i).Interface()
-			}
-		}
-	}
-	return out, errmsg.SUCCESS
 }

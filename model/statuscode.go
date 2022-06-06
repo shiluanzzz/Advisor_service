@@ -56,3 +56,9 @@ const (
 	NotComment = iota
 	Commented
 )
+
+// 顾问服务状态枚举
+const (
+	AdvisorServiceNotOpen = iota
+	AdvisorServiceOpen
+)

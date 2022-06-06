@@ -8,6 +8,7 @@ import (
 	"service/service"
 	"service/utils/errmsg"
 	"service/utils/logger"
+	"service/utils/tools"
 	"service/utils/validator"
 )
 
@@ -29,7 +30,7 @@ func UpdateUserInfoController(ctx *gin.Context) {
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 将结构体中非nil的字段提取到map中
-	if res, code = StructToMap(data, "structs"); code != errmsg.SUCCESS {
+	if res, code = tools.StructToMap(data, "structs"); code != errmsg.SUCCESS {
 		return
 	}
 	validateFunc := map[string]interface{}{

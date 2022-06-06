@@ -10,6 +10,7 @@ import (
 	"service/utils/cronjob"
 	"service/utils/errmsg"
 	"service/utils/logger"
+	"service/utils/tools"
 	"service/utils/validator"
 	"strconv"
 	"time"
@@ -17,23 +18,23 @@ import (
 
 // NewOrderController 新建订单
 func NewOrderController(ctx *gin.Context) {
-	var jsonData model.Order
+	var orderInfo model.OrderInitInfo
+	var data model.Order
 	var code int
 	var msg string
 	// 数据绑定
-	err := ctx.ShouldBindJSON(&jsonData)
+	err := ctx.ShouldBindJSON(&orderInfo)
 	if err != nil {
-		ginBindError(ctx, err, "NewOrderController", jsonData)
+		ginBindError(ctx, err, "NewOrderController", orderInfo)
 		return
 	}
-	// 只接受这些字段，其他字段不接受。
-	data := model.Order{
-		UserId:        jsonData.UserId,
-		ServiceId:     jsonData.ServiceId,
-		AdvisorId:     jsonData.AdvisorId,
-		Situation:     jsonData.Situation,
-		Question:      jsonData.Question,
-		Coin:          jsonData.Coin,
+	// init model
+	data = model.Order{
+		UserId:        orderInfo.UserId,
+		ServiceId:     orderInfo.ServiceId,
+		AdvisorId:     orderInfo.AdvisorId,
+		Situation:     orderInfo.Situation,
+		Question:      orderInfo.Question,
 		Status:        model.Pending,
 		CommentStatus: model.NotComment,
 	}
@@ -43,7 +44,7 @@ func NewOrderController(ctx *gin.Context) {
 		} else {
 			logger.Log.Info("用户新建订单", zap.Int64("order_id", data.Id))
 		}
-		commonReturn(ctx, code, msg, data)
+		commonReturn(ctx, code, msg, tools.TransformStruct(data))
 	}()
 	// 数据基本校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
@@ -66,7 +67,7 @@ func NewOrderController(ctx *gin.Context) {
 	if code, serviceStatus = service.GetTableItem(service.SERVICETABLE, data.ServiceId, "status"); code != errmsg.SUCCESS {
 		return
 	}
-	if serviceStatus.(int64) != 1 {
+	if serviceStatus.(int64) != model.AdvisorServiceOpen {
 		code = errmsg.ErrorServiceNotOpen
 		return
 	}
@@ -75,12 +76,7 @@ func NewOrderController(ctx *gin.Context) {
 	if code, coinInSQL = service.GetTableItem(service.SERVICETABLE, data.ServiceId, "price"); code != errmsg.SUCCESS {
 		return
 	}
-	if data.Coin == 0 {
-		data.Coin = coinInSQL.(float32)
-	} else if data.Coin != coinInSQL || data.Coin < -1 {
-		code = errmsg.ErrorPriceNotMatch
-		return
-	}
+	data.Coin = coinInSQL.(float32)
 
 	// ------- 输入数据检查结束 -------
 	data.Status = 0
@@ -116,7 +112,7 @@ func GetOrderListController(ctx *gin.Context) {
 		} else {
 			logger.Log.Info("顾问查看订单列表", zap.Int64("advisor_id", ctx.GetInt64("id")))
 		}
-		commonReturn(ctx, code, "", TransformDataSlice(data))
+		commonReturn(ctx, code, "", tools.TransformDataSlice(data))
 	}()
 	if code == errmsg.SUCCESS {
 		// 附加信息 用户名、时间格式、服务类型、
@@ -155,7 +151,7 @@ func GetOrderDetailController(ctx *gin.Context) {
 		} else {
 			logger.Log.Info("顾问查看订单详情", zap.Int("order_id", id))
 		}
-		commonReturn(ctx, code, msg, TransformData(data))
+		commonReturn(ctx, code, msg, tools.TransformData(data))
 	}()
 	if err != nil || id < 1 {
 		code = errmsg.ErrorInput
@@ -185,7 +181,7 @@ func GetOrderDetailController(ctx *gin.Context) {
 			userInfo["birthShow"] = birthTime.Format("Jan 02,2006")
 		}
 	}
-	data["userInfo"] = TransformData(userInfo)
+	data["userInfo"] = tools.TransformData(userInfo)
 	return
 }
 

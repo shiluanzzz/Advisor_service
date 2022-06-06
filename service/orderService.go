@@ -58,9 +58,14 @@ func NewOrderAndCostTrans(model *model.Order) (int, int64) {
 func NewOrder(model *model.Order, tx *sql.Tx) (int, int64) {
 	// 转化数据并生成sql语句
 	var table = ORDERTABLE
+	var userMap map[string]interface{}
 	var data []map[string]interface{}
+	var err error
 	// 去出token字段
-	userMap := structs.Map(model)
+	userMap = structs.Map(model)
+	//if err, userMap = tools.Structs2Map(model); err != nil {
+	//	return errmsg.ERROR, -1
+	//}
 	delete(userMap, "token")
 	data = append(data, userMap)
 	cond, values, err := qb.BuildInsert(table, data)
@@ -253,37 +258,6 @@ func AddRushCoin2Advisor(data *model.OrderReply, tx *sql.Tx) int {
 	affects, _ := row.RowsAffected()
 	if affects != 1 {
 		logger.Log.Error("用户金币修改设计到多个行列", zap.Int64("advisor_id", data.AdvisorId))
-		return errmsg.ErrorAffectsNotOne
-	}
-	return errmsg.SUCCESS
-}
-
-// ModifyOrderStatus 修改订单的状态
-func ModifyOrderStatus(data *model.OrderReply, status int, tx *sql.Tx) int {
-	where := map[string]interface{}{
-		"id": data.Id,
-	}
-	update := map[string]interface{}{
-		"status": status,
-	}
-	cond, values, err := qb.BuildUpdate(ORDERTABLE, where, update)
-	if err != nil {
-		logger.GendryBuildError("ModifyOrderStatus", err, "cond", cond, "values", values)
-		return errmsg.ErrorSqlBuild
-	}
-	var row sql.Result
-	if tx != nil {
-		row, err = tx.Exec(cond, values...)
-	} else {
-		row, err = utils.DbConn.Exec(cond, values...)
-	}
-	if err != nil {
-		logger.SqlError("ModifyOrderStatus", "update", err, "cond", cond)
-		return errmsg.ErrorMysql
-	}
-	affects, _ := row.RowsAffected()
-	if affects != 1 {
-		logger.Log.Error("修改订单状态涉及到多条数据", zap.Int64("order_id", data.Id))
 		return errmsg.ErrorAffectsNotOne
 	}
 	return errmsg.SUCCESS

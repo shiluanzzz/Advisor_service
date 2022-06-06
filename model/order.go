@@ -18,6 +18,13 @@ type Order struct {
 	CommentTime   int64   `structs:"comment_time" json:"commentTime"`
 	CommentStatus int64   `structs:"comment_status" json:"commentStatus"`
 }
+type OrderInitInfo struct {
+	UserId    int64  `structs:"user_id" json:"userId" validate:"number"`
+	ServiceId int64  `structs:"service_id" json:"serviceId" validate:"required,number"`
+	AdvisorId int64  `structs:"advisor_id" json:"advisorId" validate:"required,number"`
+	Situation string `structs:"situation" json:"situation" validate:"required,max=3000"`
+	Question  string `structs:"question" json:"question" validate:"required,max=200"`
+}
 type OrderReply struct {
 	Id        int64   `structs:"id" json:"orderId" validate:"min=1"`
 	AdvisorId int64   `structs:"advisor_id" json:"advisorId"`

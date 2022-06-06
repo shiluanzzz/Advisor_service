@@ -7,6 +7,7 @@ import (
 	"service/service"
 	"service/utils/errmsg"
 	"service/utils/logger"
+	"service/utils/tools"
 	"service/utils/validator"
 	"strconv"
 )
@@ -59,10 +60,10 @@ func UpdateAdvisorController(ctx *gin.Context) {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
 		}
-		commonReturn(ctx, code, msg, TransformData(res))
+		commonReturn(ctx, code, msg, tools.TransformData(res))
 	}()
 	// 将结构体中非nil的字段提取到map中
-	if res, code = StructToMap(data, "structs"); code != errmsg.SUCCESS {
+	if res, code = tools.StructToMap(data, "structs"); code != errmsg.SUCCESS {
 		return
 	}
 	// 数据校验 将不同的字段绑定到不同的校验函数中，使用反射做校验
@@ -150,8 +151,8 @@ func GetAdvisorInfo(ctx *gin.Context) {
 
 	commonReturn(ctx, code, "",
 		map[string]interface{}{
-			"info":    TransformData(infoData),
-			"service": TransformDataSlice(serviceData),
+			"info":    tools.TransformData(infoData),
+			"service": tools.TransformDataSlice(serviceData),
 		},
 	)
 }
