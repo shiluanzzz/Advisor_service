@@ -354,6 +354,7 @@ func CommentOrderController(ctx *gin.Context) {
 		map[string]interface{}{
 			"comment_time": data.CommentTime,
 			"comment":      data.Comment,
+			"rate":         data.Rate,
 		},
 	)
 	if code == errmsg.SUCCESS {
