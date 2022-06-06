@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"service/model"
 	"service/service"
 	"service/utils"
@@ -14,6 +15,7 @@ import (
 	"time"
 )
 
+// NewOrderController 新建订单
 func NewOrderController(ctx *gin.Context) {
 	var jsonData model.Order
 	var code int
@@ -26,37 +28,33 @@ func NewOrderController(ctx *gin.Context) {
 	}
 	// 只接受这些字段，其他字段不接受。
 	data := model.Order{
-		Id:        jsonData.Id,
-		UserId:    jsonData.UserId,
-		ServiceId: jsonData.ServiceId,
-		AdvisorId: jsonData.AdvisorId,
-		Situation: jsonData.Situation,
-		Question:  jsonData.Question,
-		Coin:      jsonData.Coin,
-		Status:    model.Pending,
+		UserId:        jsonData.UserId,
+		ServiceId:     jsonData.ServiceId,
+		AdvisorId:     jsonData.AdvisorId,
+		Situation:     jsonData.Situation,
+		Question:      jsonData.Question,
+		Coin:          jsonData.Coin,
+		Status:        model.Pending,
+		CommentStatus: model.NotComment,
 	}
 	defer func() {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
+		} else {
+			logger.Log.Info("用户新建订单", zap.Int64("order_id", data.Id))
 		}
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 数据基本校验
-	msg, code = validator.Validate(data)
-	if code != errmsg.SUCCESS {
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
 	}
 	// ------- 输入数据检查 -------
-	// user_id 跟 token里的id是否一致
-	if data.UserId == 0 {
-		data.UserId = ctx.GetInt64("id")
-	} else if data.UserId != ctx.GetInt64("id") {
-		code = errmsg.ErrorIdNotMatchWithToken
-		return
-	}
+	data.UserId = ctx.GetInt64("id")
+
 	// serviceId 跟顾问的Id是否绑定正确
-	code, advisorIdInSQL := service.GetTableItem(service.SERVICETABLE, data.ServiceId, "advisor_id")
-	if code != errmsg.SUCCESS {
+	var advisorIdInSQL interface{}
+	if code, advisorIdInSQL = service.GetTableItem(service.SERVICETABLE, data.ServiceId, "advisor_id"); code != errmsg.SUCCESS {
 		return
 	}
 	if advisorIdInSQL.(int64) != data.AdvisorId {
@@ -64,8 +62,8 @@ func NewOrderController(ctx *gin.Context) {
 		return
 	}
 	// serviceId 是否还是open的
-	code, serviceStatus := service.GetTableItem(service.SERVICETABLE, data.ServiceId, "status")
-	if code != errmsg.SUCCESS {
+	var serviceStatus interface{}
+	if code, serviceStatus = service.GetTableItem(service.SERVICETABLE, data.ServiceId, "status"); code != errmsg.SUCCESS {
 		return
 	}
 	if serviceStatus.(int64) != 1 {
@@ -73,7 +71,10 @@ func NewOrderController(ctx *gin.Context) {
 		return
 	}
 	// coin如果==0或者前端没传 自己查 如果传了但是不一致，返回可能顾问可能修改了价格
-	code, coinInSQL := service.GetTableItem(service.SERVICETABLE, data.ServiceId, "price")
+	var coinInSQL interface{}
+	if code, coinInSQL = service.GetTableItem(service.SERVICETABLE, data.ServiceId, "price"); code != errmsg.SUCCESS {
+		return
+	}
 	if data.Coin == 0 {
 		data.Coin = coinInSQL.(float32)
 	} else if data.Coin != coinInSQL || data.Coin < -1 {
@@ -86,6 +87,11 @@ func NewOrderController(ctx *gin.Context) {
 	data.CreateTime = time.Now().Unix()
 	// 加急订单的价格 只做记录，等到用户加急的时候安装这个去扣钱
 	data.RushCoin = data.Coin * utils.RushOrderCost
+	// 提交到service层的事务
+	if code, data.Id = service.NewOrderAndCostTrans(&data); code != errmsg.SUCCESS {
+		return
+	}
+
 	// 订单状态24h后过期
 	job := cronjob.CronJob{
 		OrderId:    data.Id,
@@ -94,21 +100,21 @@ func NewOrderController(ctx *gin.Context) {
 		CronId:     -1,
 		CronType:   cronjob.PendingOrderType,
 	}
-	code = cronjob.AddJob(&job)
-	if code == errmsg.SUCCESS {
-		code, data.Id = service.NewOrderAndCostTrans(&data)
-		if code != errmsg.SUCCESS {
-			cronjob.CloseJob(&job)
-		}
+	if code = cronjob.AddJob(&job); code != errmsg.SUCCESS {
+		logger.Log.Error("用户订单的定时任务创建失败", zap.Int64("order_id", data.Id))
+		return
 	}
 	return
 }
 
+// GetOrderListController 获取顾问的订单列表
 func GetOrderListController(ctx *gin.Context) {
 	code, data := service.GetOrderList(ctx.GetInt64("id"))
 	defer func() {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
+		} else {
+			logger.Log.Info("顾问查看订单列表", zap.Int64("advisor_id", ctx.GetInt64("id")))
 		}
 		commonReturn(ctx, code, "", TransformDataSlice(data))
 	}()
@@ -134,6 +140,8 @@ func GetOrderListController(ctx *gin.Context) {
 	}
 	return
 }
+
+// GetOrderDetailController 获取订单详情
 func GetOrderDetailController(ctx *gin.Context) {
 	idString := ctx.Param("id")
 	id, err := strconv.Atoi(idString)
@@ -144,6 +152,8 @@ func GetOrderDetailController(ctx *gin.Context) {
 	defer func() {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
+		} else {
+			logger.Log.Info("顾问查看订单详情", zap.Int("order_id", id))
 		}
 		commonReturn(ctx, code, msg, TransformData(data))
 	}()
@@ -158,7 +168,7 @@ func GetOrderDetailController(ctx *gin.Context) {
 		return
 	}
 	if advisorIdInSQL.(int64) != ctx.GetInt64("id") {
-		code = errmsg.ErrorServiceIdNotMatchWithAdvisorID
+		code = errmsg.ErrorOrderIdNotMatchWithAdvisorID
 		return
 	}
 	// 获取基础的订单信息
@@ -179,6 +189,7 @@ func GetOrderDetailController(ctx *gin.Context) {
 	return
 }
 
+// OrderReplyController 顾问回复订单
 func OrderReplyController(ctx *gin.Context) {
 
 	var data model.OrderReply
@@ -198,6 +209,8 @@ func OrderReplyController(ctx *gin.Context) {
 	defer func() {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
+		} else {
+			logger.Log.Info("顾问回复订单", zap.Int64("order_id", data.Id))
 		}
 		commonReturn(ctx, code, "", data)
 	}()
@@ -206,7 +219,7 @@ func OrderReplyController(ctx *gin.Context) {
 	// 检查顾问的ID和库里的订单上的id是否一致
 	code, advisorIdInSQL := service.GetTableItem(service.ORDERTABLE, data.Id, "advisor_id")
 	if code != errmsg.SUCCESS || advisorIdInSQL.(int64) != data.AdvisorId {
-		code = errmsg.ErrorServiceIdNotMatchWithAdvisorID
+		code = errmsg.ErrorOrderIdNotMatchWithAdvisorID
 		return
 	}
 	//// 检测订单是什么状态 只有pending,rush可以回复 放到事务里去了。
@@ -239,6 +252,8 @@ func RushOrderController(ctx *gin.Context) {
 	defer func() {
 		if code != errmsg.SUCCESS {
 			logger.Log.Warn(errmsg.GetErrMsg(code))
+		} else {
+			logger.Log.Info("用户加急订单", zap.Int64("order_id", data.Id))
 		}
 		commonReturn(ctx, code, "", data)
 	}()
@@ -247,7 +262,7 @@ func RushOrderController(ctx *gin.Context) {
 	// 是不是自己的订单
 	code, userIdInSQL := service.GetTableItem(service.ORDERTABLE, data.Id, "user_id")
 	if code != errmsg.SUCCESS || userIdInSQL.(int64) != ctx.GetInt64("id") {
-		code = errmsg.ErrorServiceIdNotMatchWithAdvisorID
+		code = errmsg.ErrorOrderIdNotMatchWithUserID
 		return
 	}
 	// 最后一个小时不能加急了
@@ -271,6 +286,84 @@ func RushOrderController(ctx *gin.Context) {
 	if code = service.RushOrderTrans(&data); code != errmsg.SUCCESS {
 		// 如果事务失败,停止定时job
 		cronjob.CloseJob(&job)
+	}
+	return
+}
+
+// CommentOrderController 用户回复订单 week3
+func CommentOrderController(ctx *gin.Context) {
+	var comment model.CommentStruct
+	var data model.OrderComment
+	var code int
+	var msg string
+	if err := ctx.ShouldBindJSON(&comment); err != nil {
+		ginBindError(ctx, err, "CommentOrderController", comment)
+		return
+	}
+	// defer return
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn(errmsg.GetErrMsg(code))
+		} else {
+			logger.Log.Info("用户评论订单", zap.Int64("order_id", data.Id))
+		}
+		commonReturn(ctx, code, msg, data)
+	}()
+	// 数据基本校验
+	msg, code = validator.Validate(comment)
+	if code != errmsg.SUCCESS {
+		return
+	}
+	// 构造
+	data = model.OrderComment{
+		CommentStruct: comment,
+		UserId:        ctx.GetInt64("id"),
+		CommentTime:   time.Now().Unix(),
+	}
+	// 检查订单与用户ID是否对应
+	var userIdInSQL interface{}
+	if code, userIdInSQL = service.GetTableItem(service.ORDERTABLE, data.Id, "user_id"); code != errmsg.SUCCESS {
+		return
+	}
+	if userIdInSQL.(int64) != data.UserId {
+		code = errmsg.ErrorOrderIdNotMatchWithUserID
+		return
+	}
+	// 订单完成才能回复
+	var orderStatus interface{}
+	if code, orderStatus = service.GetTableItem(service.ORDERTABLE, data.Id, "status"); code != errmsg.SUCCESS {
+		return
+	}
+	if orderStatus.(int64) != model.Completed {
+		// 没完成你回复啥
+		code = errmsg.ErrorOrderCantComment
+		return
+	}
+	// 订单是否已经回复过一次
+	var commentStatus interface{}
+	if code, commentStatus = service.GetTableItem(service.ORDERTABLE, data.Id, "comment_status"); code != errmsg.SUCCESS {
+		return
+	}
+	if commentStatus.(int64) != model.NotComment {
+		// 订单不可以在回复了
+		code = errmsg.ErrorOrderCantComment
+		return
+	}
+	// 更新数据
+	code = service.UpdateTableItem(service.ORDERTABLE, data.Id,
+		map[string]interface{}{
+			"comment_time": data.CommentTime,
+			"comment":      data.Comment,
+		},
+	)
+	if code == errmsg.SUCCESS {
+		// 更新评论状态
+		code = service.UpdateTableItem(service.ORDERTABLE, data.Id, map[string]interface{}{
+			"comment_status": model.Commented,
+		})
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn("用户的评论状态更新失败，实际已评论!", zap.Int64("order_id", data.Id))
+		}
 	}
 	return
 }

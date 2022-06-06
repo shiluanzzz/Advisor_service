@@ -35,19 +35,26 @@ func InitRouter() {
 		AdvisorRouter.POST("/status", v1.ModifyAdvisorStatus)
 	}
 	Service := r.Group("service")
-	Service.Use(middleware.JwtToken())
+	Service.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.ADVISORTABLE))
 	{
 		Service.POST("/status", v1.ModifyServiceStatus)
 		Service.POST("/price", v1.ModifyServicePrice)
 	}
 	order := r.Group("order")
-	order.Use(middleware.JwtToken())
+	order.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.ADVISORTABLE))
 	{
-		order.POST("/add", v1.NewOrderController)
+		// advisor
 		order.GET("/list", v1.GetOrderListController)
 		order.POST("/reply", v1.OrderReplyController)
-		order.POST("/rush", v1.RushOrderController)
 		order.GET("/detail/:id", v1.GetOrderDetailController)
+	}
+	orderUser := r.Group("order")
+	orderUser.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.USERTABLE))
+	{
+		// user
+		orderUser.POST("/add", v1.NewOrderController)
+		orderUser.POST("/rush", v1.RushOrderController)
+		orderUser.POST("/comment", v1.CommentOrderController)
 	}
 	logger.Log.Info("服务启动")
 	err := r.Run(utils.HttpPort)

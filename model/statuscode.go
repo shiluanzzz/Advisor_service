@@ -2,6 +2,7 @@ package model
 
 import "fmt"
 
+// 订单状态
 const (
 	Pending = iota
 	Rush
@@ -29,6 +30,7 @@ func GetOrderEnableReplyId() []int {
 	}
 }
 
+// 用户性别枚举
 const (
 	Unknown = iota
 	Male
@@ -48,3 +50,9 @@ func GetGenderNameById(id int) string {
 		return fmt.Sprintf("性别%d不存在", id)
 	}
 }
+
+// 订单回复状态枚举
+const (
+	NotComment = iota
+	Commented
+)
