@@ -59,6 +59,10 @@ func UpdateUserInfoController(ctx *gin.Context) {
 			}
 		}
 	}
+	// 用户金币乘base存储
+	if res["coin"] != nil {
+		res["coin"] = tools.ConvertCoinF2I(*(res["coin"].(*float32)))
+	}
 	// 更新
 	code = service.Update(service.USERTABLE, res)
 	return

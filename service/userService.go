@@ -8,6 +8,7 @@ import (
 	"service/utils"
 	"service/utils/errmsg"
 	"service/utils/logger"
+	"service/utils/tools"
 )
 
 var USERTABLE = "user"
@@ -79,5 +80,6 @@ func GetUserInfo(id int64) (int, map[string]interface{}) {
 	} else {
 		logger.Log.Error("从数据库中查出的gender转int失败")
 	}
+	data["coin"] = tools.ConvertCoinI2F(data["coin"].(int64))
 	return code, data
 }

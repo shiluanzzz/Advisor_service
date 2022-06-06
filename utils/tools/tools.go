@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"reflect"
+	"service/utils"
 	"service/utils/errmsg"
 	"service/utils/logger"
 	"strings"
@@ -92,4 +93,14 @@ func Structs2Map(data interface{}) (err error, res map[string]interface{}) {
 	}
 	err = json.Unmarshal(b, &res)
 	return err, res
+}
+
+// ConvertCoinF2I 转化金币浮点->INT 入库
+func ConvertCoinF2I(coin float32) int64 {
+	return int64(coin * float32(utils.CoinBase))
+}
+
+// ConvertCoinI2F  转化金币INT-> 浮点 展示
+func ConvertCoinI2F(coin int64) float32 {
+	return float32(coin) / float32(utils.CoinBase)
 }

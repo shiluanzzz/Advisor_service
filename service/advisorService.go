@@ -12,36 +12,6 @@ import (
 
 var ADVISORTABLE = "advisor"
 
-func GetAdvisorInfo(Id int64) (int, []map[string]interface{}) {
-	where := map[string]interface{}{
-		"id": Id,
-	}
-	selects := []string{"*"}
-	cond, values, err := qb.BuildSelect(ADVISORTABLE, where, selects)
-	if err != nil {
-		logger.Log.Error("获取顾问信息错误，编译SQL错误", zap.Error(err))
-		return errmsg.ErrorSqlBuild, nil
-	}
-	row, err := utils.DbConn.Query(cond, values...)
-	if err != nil {
-		logger.Log.Error("数据库查询出错", zap.Error(err))
-		return errmsg.ErrorMysql, nil
-	}
-	res, err := scanner.ScanMapDecodeClose(row)
-	if err != nil {
-		logger.GendryScannerError("GetAdvisorInfo", err)
-		return errmsg.ErrorSqlScanner, nil
-	}
-	if res == nil {
-		return errmsg.ErrorAdvisorNotExist, nil
-	}
-	// 不传回密码
-	for _, each := range res {
-		delete(each, "password")
-	}
-	return errmsg.SUCCESS, res
-}
-
 func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	uPage := uint(page)
 	where := map[string]interface{}{
@@ -69,7 +39,7 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	return errmsg.SUCCESS, res
 }
 
-func NewAdvisorAndOrder(data *model.Login) (int, int64) {
+func NewAdvisorAndService(data *model.Login) (int, int64) {
 	var code int
 	var id int64
 	begin, err := utils.DbConn.Begin()

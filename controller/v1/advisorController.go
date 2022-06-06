@@ -39,7 +39,7 @@ func NewAdvisorController(ctx *gin.Context) {
 		// 用户密码加密存储
 		data.Password = service.GetPwd(data.Password)
 		// 顾问的创建和服务的创建使用事务统一提交
-		code, data.Id = service.NewAdvisorAndOrder(&data)
+		code, data.Id = service.NewAdvisorAndService(&data)
 	}
 	// success
 	return
@@ -139,16 +139,13 @@ func GetAdvisorInfo(ctx *gin.Context) {
 		commonReturn(ctx, code, msg, data)
 		return
 	}
-	// 先拿用户的info
+	// 先拿顾问的info
 	if code, infoData = service.GetManyTableItemsById(service.ADVISORTABLE, data.Id, []string{"*"}); code == errmsg.SUCCESS {
 		// 在拿用户的服务
-		//code, serviceData = service.GetAdvisorService(data.Id)
-		code, serviceData = service.GetManyTableItemsByWhere(service.SERVICETABLE,
-			map[string]interface{}{"advisor_id": data.Id, "status": 1},
-			[]string{"*"},
-		)
+		code, serviceData = service.GetAdvisorService(data.Id)
 	}
-
+	delete(infoData, "password")
+	infoData["coin"] = tools.ConvertCoinI2F(infoData["coin"].(int64))
 	commonReturn(ctx, code, "",
 		map[string]interface{}{
 			"info":    tools.TransformData(infoData),

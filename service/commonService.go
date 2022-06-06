@@ -152,7 +152,13 @@ func CheckIdExist(id int64, table string) int {
 }
 
 // GetTableItem 通用的单项查询结构 字符串类型返回的是uint8
-func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.Tx) (int, interface{}) {
+func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.Tx) (code int, res interface{}) {
+	var err error
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Error("通用查询出错", zap.Error(err), zap.String("errorMsg", errmsg.GetErrMsg(code)))
+		}
+	}()
 	where := map[string]interface{}{
 		"id": tableId,
 	}
@@ -162,7 +168,6 @@ func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.
 		logger.GendryBuildError("GetTableItem", err)
 		return errmsg.ErrorSqlBuild, nil
 	}
-	var res interface{}
 	var row *sql.Row
 	// 可能是事务调用的
 	if len(tx) != 0 {
@@ -178,7 +183,13 @@ func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.
 }
 
 // GetManyTableItemsById 通过Id字段查从数据表中查多个字段
-func GetManyTableItemsById(tableName string, tableId int64, selects []string, tx ...*sql.Tx) (int, map[string]interface{}) {
+func GetManyTableItemsById(tableName string, tableId int64, selects []string, tx ...*sql.Tx) (code int, res map[string]interface{}) {
+	var err error
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Error("通用查询出错", zap.Error(err), zap.String("errorMsg", errmsg.GetErrMsg(code)))
+		}
+	}()
 	where := map[string]interface{}{
 		"id": tableId,
 	}
@@ -192,6 +203,13 @@ func GetManyTableItemsById(tableName string, tableId int64, selects []string, tx
 		rows, err = tx[0].Query(cond, values...)
 	} else {
 		rows, err = utils.DbConn.Query(cond, values...)
+	}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errmsg.ErrorNoResult, nil
+		} else {
+			return errmsg.ErrorMysql, nil
+		}
 	}
 	results, err := scanner.ScanMapDecodeClose(rows)
 	if err != nil {

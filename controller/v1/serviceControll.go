@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
+	"service/model"
 	"service/service"
 	"service/utils/errmsg"
 	"service/utils/validator"
@@ -33,12 +34,8 @@ func ModifyServiceStatus(ctx *gin.Context) {
 
 // ModifyServicePrice 修改顾客服务的价格
 func ModifyServicePrice(ctx *gin.Context) {
-	type servicePrice struct {
-		AdvisorId int64   `json:"advisorId"`
-		ServiceID int     `form:"serviceNameId" json:"serviceNameId" validate:"required,number,lte=4"`
-		Price     float32 `form:"price" json:"price" validate:"required,number,gte=1,lte=36"`
-	}
-	var data servicePrice
+
+	var data model.ServicePrice
 	var msg string
 	var code int
 	if err := ctx.ShouldBind(&data); err != nil {

@@ -44,7 +44,9 @@ func NewOrderController(ctx *gin.Context) {
 		} else {
 			logger.Log.Info("用户新建订单", zap.Int64("order_id", data.Id))
 		}
-		commonReturn(ctx, code, msg, tools.TransformStruct(data))
+		// coin convert
+		res := tools.TransformStruct(data)
+		commonReturn(ctx, code, msg, res)
 	}()
 	// 数据基本校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
@@ -76,13 +78,13 @@ func NewOrderController(ctx *gin.Context) {
 	if code, coinInSQL = service.GetTableItem(service.SERVICETABLE, data.ServiceId, "price"); code != errmsg.SUCCESS {
 		return
 	}
-	data.Coin = coinInSQL.(float32)
+	data.Coin = coinInSQL.(int64)
 
 	// ------- 输入数据检查结束 -------
 	data.Status = 0
 	data.CreateTime = time.Now().Unix()
 	// 加急订单的价格 只做记录，等到用户加急的时候安装这个去扣钱
-	data.RushCoin = data.Coin * utils.RushOrderCost
+	data.RushCoin = int64(float32(data.Coin) * utils.RushOrderCost)
 	// 提交到service层的事务
 	if code, data.Id = service.NewOrderAndCostTrans(&data); code != errmsg.SUCCESS {
 		return
@@ -182,6 +184,8 @@ func GetOrderDetailController(ctx *gin.Context) {
 		}
 	}
 	data["userInfo"] = tools.TransformData(userInfo)
+	data["coin"] = tools.ConvertCoinI2F(data["coin"].(int64))
+	data["rush_coin"] = tools.ConvertCoinI2F(data["rush_coin"].(int64))
 	return
 }
 
@@ -224,11 +228,11 @@ func OrderReplyController(ctx *gin.Context) {
 	if code != errmsg.SUCCESS {
 		return
 	}
-	data.Coin = coin.(float32)
+	data.Coin = coin.(int64)
 	//加急的订单价格
 	code, rushCoin := service.GetTableItem(service.ORDERTABLE, data.Id, "rush_coin")
 	if code == errmsg.SUCCESS {
-		data.RushCoin = rushCoin.(float32)
+		data.RushCoin = rushCoin.(int64)
 		// 提交到service层
 		code = service.ReplyOrderServiceTrans(&data)
 	}

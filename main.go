@@ -18,5 +18,4 @@ func main() {
 			logger.Log.Error("关闭数据库连接错误", zap.Error(err))
 		}
 	}()
-	//_, res := service.GetAdvisorService("17607175592")
 }

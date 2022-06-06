@@ -3,13 +3,13 @@ package service
 import (
 	"database/sql"
 	qb "github.com/didi/gendry/builder"
-	"github.com/didi/gendry/scanner"
 	"github.com/fatih/structs"
 	_ "github.com/go-sql-driver/mysql"
 	"service/model"
 	"service/utils"
 	"service/utils/errmsg"
 	"service/utils/logger"
+	"service/utils/tools"
 )
 
 var SERVICETABLE = "service"
@@ -23,7 +23,7 @@ func NewService(advisorId int64, tx *sql.Tx) int {
 				AdvisorId:     advisorId,
 				ServiceName:   v,
 				ServiceNameId: k,
-				Price:         1,
+				Price:         tools.ConvertCoinF2I(1.0),
 				Status:        0,
 			}),
 		)
@@ -49,7 +49,7 @@ func ModifyServicePrice(advisorId int64, serviceId int, price float32) int {
 		"advisor_id":      advisorId,
 	}
 	updates := map[string]interface{}{
-		"price": price,
+		"price": tools.ConvertCoinF2I(price),
 	}
 	cond, values, err := qb.BuildUpdate(SERVICETABLE, where, updates)
 	if err != nil {
@@ -86,26 +86,17 @@ func ModifyServiceStatus(advisorId int64, serviceId int, newStatus int) int {
 	return errmsg.SUCCESS
 }
 
-func GetAdvisorService(id int64) (int, []map[string]interface{}) {
-	where := map[string]interface{}{
-		"advisor_id": id,
-		"status":     1,
+func GetAdvisorService(id int64) (code int, res []map[string]interface{}) {
+
+	code, res = GetManyTableItemsByWhere(SERVICETABLE,
+		map[string]interface{}{"advisor_id": id, "status": 1},
+		[]string{"*"},
+	)
+	if code != errmsg.SUCCESS {
+		return
 	}
-	selects := []string{"*"}
-	cond, values, err := qb.BuildSelect(SERVICETABLE, where, selects)
-	if err != nil {
-		logger.GendryBuildError("GetAdvisorService", err, "cond", cond, "values", values)
-		return errmsg.ErrorSqlBuild, nil
+	for _, v := range res {
+		v["price"] = tools.ConvertCoinI2F(v["price"].(int64))
 	}
-	rows, err := utils.DbConn.Query(cond, values...)
-	if err != nil {
-		logger.SqlError("GetAdvisorService", "select", err, "cond", cond, "values", values)
-		return errmsg.ErrorMysql, nil
-	}
-	res, err := scanner.ScanMapDecodeClose(rows)
-	if err != nil {
-		logger.GendryScannerError("GetAdvisorService", err, "cond", cond, "values", values)
-		return errmsg.ErrorSqlBuild, nil
-	}
-	return errmsg.SUCCESS, res
+	return
 }

@@ -1,13 +1,13 @@
 package model
 
 type UserInfo struct {
-	Name   *string `structs:"name"   json:"name"   `
-	Phone  *string `structs:"phone"  json:"phone"  `
-	Birth  *string `structs:"birth"  json:"birth"  `
-	Gender *int    `structs:"gender" json:"gender" `
-	Bio    *string `structs:"bio"    json:"bio"    `
-	About  *string `structs:"about"  json:"about"  `
-	Coin   *int    `structs:"coin"   json:"coin"   `
+	Name   *string  `structs:"name"   json:"name"   `
+	Phone  *string  `structs:"phone"  json:"phone"  `
+	Birth  *string  `structs:"birth"  json:"birth"  `
+	Gender *int     `structs:"gender" json:"gender" `
+	Bio    *string  `structs:"bio"    json:"bio"    `
+	About  *string  `structs:"about"  json:"about"  `
+	Coin   *float32 `structs:"coin"   json:"coin"   `
 }
 
 type Login struct {

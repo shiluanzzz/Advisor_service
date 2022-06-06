@@ -104,9 +104,9 @@ func WorkExperience(value interface{}) (string, int) {
 }
 func CoinFunc(value interface{}) (string, int) {
 	type t struct {
-		Coin *int `validate:"required,gte=0"`
+		Coin *float32 `validate:"required,gte=0"`
 	}
-	if valueTrue, ok := value.(*int); ok {
+	if valueTrue, ok := value.(*float32); ok {
 		return Validate(t{Coin: valueTrue})
 	} else {
 		return fmt.Sprintf(msg, "int"), errmsg.ErrorInput

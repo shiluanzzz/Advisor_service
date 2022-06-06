@@ -24,6 +24,7 @@ var (
 	RushOrderCost           float32
 	RushOrder2PendingTime   int64
 	PendingOrder2ExpireTime int64
+	CoinBase                int64
 )
 
 func init() {
@@ -73,9 +74,10 @@ func LoadLogger(file *ini.File) {
 	WarnLog = file.Section("logger").Key("WarnLog").MustString("./warn.log")
 }
 
-// LoadServiceLogger 读取定时任务相关的配置文件
+// LoadServiceLogger 读取业务相关的配置文件
 func LoadServiceLogger(file *ini.File) {
 	RushOrderCost = float32(file.Section("service").Key("RushOrderCost").MustFloat64(0.5))
 	RushOrder2PendingTime = file.Section("service").Key("RushOrder2PendingTime").MustInt64(10)
 	PendingOrder2ExpireTime = file.Section("service").Key("PendingOrder2ExpireTime").MustInt64(24 * 60)
+	CoinBase = file.Section("service").Key("CoinBase").MustInt64(100)
 }

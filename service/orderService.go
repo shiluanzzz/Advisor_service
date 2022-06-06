@@ -33,7 +33,7 @@ func NewOrderAndCostTrans(model *model.Order) (int, int64) {
 	code, userCoin := GetTableItem(USERTABLE, model.UserId, "coin", begin)
 	if code != errmsg.SUCCESS {
 		return code, -1
-	} else if userCoin.(float32) < model.Coin {
+	} else if userCoin.(int64) < model.Coin {
 		code = errmsg.ErrorOrderMoneyInsufficient
 		return code, -1
 	}
@@ -63,9 +63,7 @@ func NewOrder(model *model.Order, tx *sql.Tx) (int, int64) {
 	var err error
 	// 去出token字段
 	userMap = structs.Map(model)
-	//if err, userMap = tools.Structs2Map(model); err != nil {
-	//	return errmsg.ERROR, -1
-	//}
+
 	delete(userMap, "token")
 	data = append(data, userMap)
 	cond, values, err := qb.BuildInsert(table, data)
@@ -127,34 +125,6 @@ func GetOrderList(advisorId int64) (int, []map[string]interface{}) {
 	}
 	return errmsg.SUCCESS, res
 }
-
-//func GetOrderInfo(orderId int) (int, map[string]interface{}) {
-//	where := map[string]interface{}{
-//		"id": orderId,
-//	}
-//	selects := []string{"*"}
-//	cond, values, err := qb.BuildSelect(ORDERTABLE, where, selects)
-//	if err != nil {
-//		logger.GendryBuildError("orderService.GetOrderInfo", err, "cond", cond, "values", values)
-//		return errmsg.ErrorSqlBuild, nil
-//	}
-//	rows, err := utils.DbConn.Query(cond, values...)
-//	if err != nil {
-//		logger.SqlError("orderService.GetOrderInfo", "select", err, "cond", cond, "values", values)
-//		return errmsg.ErrorMysql, nil
-//	}
-//	ress, err := scanner.ScanMapDecodeClose(rows)
-//	if err != nil {
-//		logger.GendryScannerError("orderService.GetOrderInfo", err, "cond", cond, "values", values)
-//		return errmsg.ErrorSqlScanner, nil
-//	}
-//	if len(ress) > 1 {
-//		return errmsg.ErrorRowNotExpect, nil
-//	} else if len(ress) == 0 {
-//		return errmsg.ErrorNoResult, nil
-//	}
-//	return errmsg.SUCCESS, ress[0]
-//}
 
 // ReplyOrderServiceTrans 事务提交 订单回复服务
 func ReplyOrderServiceTrans(data *model.OrderReply) (code int) {
@@ -286,7 +256,7 @@ func RushOrderTrans(data *model.OrderRush) (code int) {
 	if code != errmsg.SUCCESS {
 		return code
 	}
-	if userMoney.(float32) < orderRushMoney.(float32) {
+	if userMoney.(int64) < orderRushMoney.(int64) {
 		return errmsg.ErrorOrderMoneyInsufficient
 	}
 
@@ -311,7 +281,7 @@ func RushOrderTrans(data *model.OrderRush) (code int) {
 	}
 	// 修改用户金币
 	code = UpdateTableItem(USERTABLE, data.UserId, map[string]interface{}{
-		"coin": userMoney.(float32) - orderRushMoney.(float32),
+		"coin": userMoney.(int64) - orderRushMoney.(int64),
 	}, begin)
 	if code != errmsg.SUCCESS {
 		return code
