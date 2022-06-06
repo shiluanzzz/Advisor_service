@@ -4,6 +4,7 @@ type Order struct {
 	Id            int64  `structs:"id" json:"orderId"`
 	UserId        int64  `structs:"user_id" json:"userId" validate:"number"`
 	ServiceId     int64  `structs:"service_id" json:"serviceId" validate:"required,number"`
+	ServiceNameId int64  `structs:"service_name_id" json:"serviceNameId"`
 	AdvisorId     int64  `structs:"advisor_id" json:"advisorId" validate:"required,number"`
 	Situation     string `structs:"situation" json:"situation" validate:"required,max=3000"`
 	Question      string `structs:"question" json:"question" validate:"required,max=200"`

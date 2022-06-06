@@ -73,7 +73,6 @@ func NewOrderController(ctx *gin.Context) {
 		code = errmsg.ErrorServiceNotOpen
 		return
 	}
-	// coin如果==0或者前端没传 自己查 如果传了但是不一致，返回可能顾问可能修改了价格
 	var coinInSQL interface{}
 	if code, coinInSQL = service.GetTableItem(service.SERVICETABLE, data.ServiceId, "price"); code != errmsg.SUCCESS {
 		return
@@ -83,6 +82,11 @@ func NewOrderController(ctx *gin.Context) {
 	// ------- 输入数据检查结束 -------
 	data.Status = 0
 	data.CreateTime = time.Now().Unix()
+	if code, ServiceNameId := service.GetTableItem(service.SERVICETABLE, data.ServiceId, "service_name_id"); code != errmsg.SUCCESS {
+		return
+	} else {
+		data.ServiceNameId = ServiceNameId.(int64)
+	}
 	// 加急订单的价格 只做记录，等到用户加急的时候安装这个去扣钱
 	data.RushCoin = int64(float32(data.Coin) * utils.RushOrderCost)
 	// 提交到service层的事务
