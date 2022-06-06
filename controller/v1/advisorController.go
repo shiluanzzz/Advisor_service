@@ -128,12 +128,26 @@ func GetAdvisorInfo(ctx *gin.Context) {
 		Id int64 `form:"id" validate:"required,min=0"`
 	}
 	var data Num
-	var serviceData []map[string]interface{}
-	var infoData map[string]interface{}
+	var serviceData, commentsData []map[string]interface{}
+	var infoData, showInfo map[string]interface{}
 	var code int
+	var msg string
 	if err := ctx.ShouldBindQuery(&data); err != nil {
 		ginBindError(ctx, err, "GetAdvisorInfo", data)
 	}
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Warn(errmsg.GetErrMsg(code))
+		}
+		commonReturn(ctx, code, msg,
+			map[string]interface{}{
+				"info":        tools.TransformData(infoData),
+				"service":     tools.TransformDataSlice(serviceData),
+				"showing":     tools.TransformData(showInfo),
+				"commentData": tools.TransformDataSlice(commentsData),
+			},
+		)
+	}()
 	// 字段基础校验
 	if msg, code := validator.Validate(data); code != errmsg.SUCCESS {
 		commonReturn(ctx, code, msg, data)
@@ -146,12 +160,52 @@ func GetAdvisorInfo(ctx *gin.Context) {
 	}
 	delete(infoData, "password")
 	infoData["coin"] = tools.ConvertCoinI2F(infoData["coin"].(int64))
-	commonReturn(ctx, code, "",
-		map[string]interface{}{
-			"info":    tools.TransformData(infoData),
-			"service": tools.TransformDataSlice(serviceData),
+	// week3 更详细的信息
+	// 评分
+	showInfo = map[string]interface{}{}
+	if code, showInfo["score"] = service.GetAdvisorScore(data.Id); code != errmsg.SUCCESS {
+		return
+	}
+	// 总评论数
+	if code, showInfo["total_comment"] = service.GetTableItemByWhere(service.ORDERTABLE, map[string]interface{}{
+		"status":         model.Completed,
+		"comment_status": model.Commented,
+		"advisor_id":     data.Id,
+	}, "count(id)"); code != errmsg.SUCCESS {
+		return
+	}
+	// 总订单数(readings)
+	if code, showInfo["total_order_num"] = service.GetTableItemByWhere(service.ORDERTABLE, map[string]interface{}{
+		"advisor_id": data.Id,
+		"_or": []map[string]interface{}{
+			{"service_name_id": model.VideoReading},
+			{"service_name_id": model.AudioReading},
+			{"service_name_id": model.TextReading},
 		},
-	)
+	}, "count(id)"); code != errmsg.SUCCESS {
+		return
+	}
+	// on-time 订单完成数/总订单数
+	var totalOrderCompleted, totalOrderNum interface{}
+	if code, totalOrderCompleted = service.GetTableItemByWhere(service.ORDERTABLE, map[string]interface{}{
+		"advisor_id": data.Id,
+		"status":     model.Completed,
+	}, "count(id)"); code != errmsg.SUCCESS {
+		return
+	}
+	if code, totalOrderNum = service.GetTableItemByWhere(service.ORDERTABLE, map[string]interface{}{
+		"advisor_id": data.Id,
+	}, "count(id)"); code != errmsg.SUCCESS {
+		return
+	}
+	if totalOrderNum.(int64) != 0 {
+		showInfo["on-time"] = float32(totalOrderCompleted.(int64)) / float32(totalOrderNum.(int64))
+	} else {
+		showInfo["on-time"] = 0
+	}
+	// 评论数据
+	code, commentsData = service.GetAdvisorCommentData(data.Id)
+	return
 }
 
 // ModifyAdvisorStatus 顾问修改自己的服务状态

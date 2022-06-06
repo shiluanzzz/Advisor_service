@@ -16,11 +16,18 @@ type ServiceState struct {
 	Status int   `structs:"status" form:"status" validate:"required,number,min=0,max=1"`
 }
 
+const (
+	VideoReading = iota + 1
+	AudioReading
+	TextReading
+	TextChat
+)
+
 var ServiceKind = map[int]string{
-	1: "24h Delivered Video Reading",
-	2: "24h Delivered Audio Reading",
-	3: "24h Delivered Text Reading",
-	4: "Live Text Chat",
+	VideoReading: "24h Delivered Video Reading",
+	AudioReading: "24h Delivered Audio Reading",
+	TextReading:  "24h Delivered Text Reading",
+	TextChat:     "Live Text Chat",
 }
 
 func GetServiceNameById(id int) (int, string) {

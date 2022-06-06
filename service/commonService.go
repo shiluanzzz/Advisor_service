@@ -153,15 +153,20 @@ func CheckIdExist(id int64, table string) int {
 
 // GetTableItem 通用的单项查询结构 字符串类型返回的是uint8
 func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.Tx) (code int, res interface{}) {
-	var err error
-	defer func() {
-		if code != errmsg.SUCCESS {
-			logger.Log.Error("通用查询出错", zap.Error(err), zap.String("errorMsg", errmsg.GetErrMsg(code)))
-		}
-	}()
 	where := map[string]interface{}{
 		"id": tableId,
 	}
+	return GetTableItemByWhere(tableName, where, fieldName, tx...)
+}
+
+// GetTableItemByWhere 通用的单项查询结构
+func GetTableItemByWhere(tableName string, where map[string]interface{}, fieldName string, tx ...*sql.Tx) (code int, res interface{}) {
+	var err error
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Error(fmt.Sprintf("无法从表 [%s] 根据 [%v] 匹配到 [%s] 字段,请检查。", tableName, where, fieldName), zap.Error(err))
+		}
+	}()
 	selects := []string{fieldName}
 	cond, values, err := qb.BuildSelect(tableName, where, selects)
 	if err != nil {
@@ -176,7 +181,6 @@ func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.
 		row = utils.DbConn.QueryRow(cond, values...)
 	}
 	if err = row.Scan(&res); err != nil {
-		logger.Log.Error(fmt.Sprintf("无法从表%s根据%d匹配到%s字段,请检查。", tableName, tableId, fieldName), zap.Error(err))
 		return errmsg.ErrorMysql, nil
 	}
 	return errmsg.SUCCESS, res
