@@ -209,7 +209,13 @@ func GetManyTableItemsById(tableName string, tableId int64, selects []string, tx
 }
 
 // GetManyTableItemsByWhere 通过条件判断从数据表中查多个字段
-func GetManyTableItemsByWhere(tableName string, where map[string]interface{}, selects []string, tx ...*sql.Tx) (int, []map[string]interface{}) {
+func GetManyTableItemsByWhere(tableName string, where map[string]interface{}, selects []string, tx ...*sql.Tx) (code int, res []map[string]interface{}) {
+	var err error
+	defer func() {
+		if code != errmsg.SUCCESS {
+			logger.Log.Error("通用查询出错", zap.Error(err), zap.String("errorMsg", errmsg.GetErrMsg(code)))
+		}
+	}()
 	cond, values, err := qb.BuildSelect(tableName, where, selects)
 	if err != nil {
 		logger.GendryBuildError("GetManyTableItemsByWhere", err)
@@ -220,6 +226,13 @@ func GetManyTableItemsByWhere(tableName string, where map[string]interface{}, se
 		rows, err = tx[0].Query(cond, values...)
 	} else {
 		rows, err = utils.DbConn.Query(cond, values...)
+	}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errmsg.ErrorNoResult, nil
+		} else {
+			return errmsg.ErrorMysql, nil
+		}
 	}
 	results, err := scanner.ScanMapDecodeClose(rows)
 	if err != nil {

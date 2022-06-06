@@ -143,7 +143,7 @@ func GetAdvisorInfo(ctx *gin.Context) {
 	if code, infoData = service.GetManyTableItemsById(service.ADVISORTABLE, data.Id, []string{"*"}); code == errmsg.SUCCESS {
 		// 在拿用户的服务
 		//code, serviceData = service.GetAdvisorService(data.Id)
-		code, serviceData = service.GetManyTableItemsByWhere(service.ADVISORTABLE,
+		code, serviceData = service.GetManyTableItemsByWhere(service.SERVICETABLE,
 			map[string]interface{}{"advisor_id": data.Id, "status": 1},
 			[]string{"*"},
 		)
