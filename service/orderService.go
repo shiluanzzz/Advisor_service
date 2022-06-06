@@ -15,8 +15,7 @@ import (
 
 var ORDERTABLE = "user_order"
 
-func NewOrderAndCostTrans(model *model.Order) (int, int64) {
-	var code int
+func NewOrderAndCostTrans(model *model.Order) (code int, id int64) {
 	begin, err := utils.DbConn.Begin()
 	//  defer在函数返回后统一判断事务是否需要回滚
 	defer func() {
@@ -26,16 +25,14 @@ func NewOrderAndCostTrans(model *model.Order) (int, int64) {
 		}
 	}()
 	if err != nil {
-		code = errmsg.ErrorSqlTransError
-		return code, -1
+		return errmsg.ErrorSqlTransError, -1
 	}
 	//检查金币够不够
 	code, userCoin := GetTableItem(USERTABLE, model.UserId, "coin", begin)
 	if code != errmsg.SUCCESS {
 		return code, -1
 	} else if userCoin.(int64) < model.Coin {
-		code = errmsg.ErrorOrderMoneyInsufficient
-		return code, -1
+		return errmsg.ErrorOrderMoneyInsufficient, -1
 	}
 	// 扣掉金币
 	code = CostUserCoin(model, begin)
@@ -43,12 +40,11 @@ func NewOrderAndCostTrans(model *model.Order) (int, int64) {
 		return code, -1
 	}
 	// 新建订单
-	code, id := NewOrder(model, begin)
+	code, id = NewOrder(model, begin)
 	if code == errmsg.SUCCESS {
 		err := begin.Commit()
 		if err != nil {
-			code = errmsg.ErrorSqlTransCommitError
-			return code, -1
+			return errmsg.ErrorSqlTransCommitError, -1
 		}
 	}
 	return code, id
