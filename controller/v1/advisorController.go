@@ -3,12 +3,11 @@ package v1
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"service/model"
-	"service/service"
-	"service/utils/errmsg"
-	"service/utils/logger"
-	"service/utils/tools"
-	"service/utils/validator"
+	"service-backend/model"
+	"service-backend/service"
+	"service-backend/utils/errmsg"
+	"service-backend/utils/tools"
+	"service-backend/utils/validator"
 	"strconv"
 )
 
@@ -19,33 +18,36 @@ func NewAdvisorController(ctx *gin.Context) {
 	var msg string
 	// 数据绑定
 	if err := ctx.ShouldBindJSON(&data); err != nil {
-		ginBindError(ctx, err, "NewUser", data)
+		ginBindError(ctx, err, data)
 		return
 	}
 	defer func() {
-		if code != errmsg.SUCCESS {
-			logger.Log.Warn(errmsg.GetErrMsg(code))
-		}
+		commonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
-
 	// 数据校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
-		// 数据不合法
 		return
 	}
 	// 调用service层 检查手机号是否重复
-	if code = service.CheckPhoneExist(table, data.Phone); code == errmsg.SUCCESS {
-		// 用户密码加密存储
-		data.Password = service.GetPwd(data.Password)
-		// 顾问的创建和服务的创建使用事务统一提交
-		code, data.Id = service.NewAdvisorAndService(&data)
+	code, _ = service.GetTableItemByWhere(table, map[string]interface{}{
+		"phone": data.Phone,
+	}, "phone")
+	if code != errmsg.ErrorMysqlNoRows {
+		code = errmsg.ErrorUserPhoneUsed
+		return
 	}
-	// success
+
+	if code = service.CheckPhoneExist(table, data.Phone); code != errmsg.SUCCESS {
+		return
+	}
+	// 用户密码加密存储
+	data.Password = service.GetPwd(data.Password)
+	// 顾问的创建和服务的创建使用事务统一提交
+	code, data.Id = service.NewAdvisorAndService(&data)
 	return
 }
 
-// TODO 修改
 func UpdateAdvisorController(ctx *gin.Context) {
 	var data model.Advisor
 	var res map[string]interface{}
@@ -53,14 +55,12 @@ func UpdateAdvisorController(ctx *gin.Context) {
 	var msg string
 	// 数据绑定
 	if err := ctx.ShouldBindJSON(&data); err != nil {
-		ginBindError(ctx, err, "UpdateAdvisorController", data)
+		ginBindError(ctx, err, data)
 		return
 	}
 	defer func() {
-		if code != errmsg.SUCCESS {
-			logger.Log.Warn(errmsg.GetErrMsg(code))
-		}
-		commonReturn(ctx, code, msg, tools.TransformData(res))
+		commonControllerLog(&code, &msg, data, res)
+		commonReturn(ctx, code, msg, res)
 	}()
 	// 将结构体中非nil的字段提取到map中
 	if res, code = tools.StructToMap(data, "structs"); code != errmsg.SUCCESS {
@@ -76,8 +76,7 @@ func UpdateAdvisorController(ctx *gin.Context) {
 		"about":           validator.About,
 	}
 	for key, value := range res {
-		msg, code = validator.CallFunc(validateFunc, key, value)
-		if code != errmsg.SUCCESS {
+		if msg, code = validator.CallFunc(validateFunc, key, value); code != errmsg.SUCCESS {
 			return
 		}
 	}
@@ -94,7 +93,7 @@ func UpdateAdvisorController(ctx *gin.Context) {
 		}
 	}
 	// 更新
-	code = service.Update(service.ADVISORTABLE, res)
+	code = service.UpdateTableItemById(service.ADVISORTABLE, ctx.GetInt64("id"), res)
 	return
 }
 
@@ -124,22 +123,19 @@ func GetAdvisorList(ctx *gin.Context) {
 
 // GetAdvisorInfo 获取顾问的详细信息
 func GetAdvisorInfo(ctx *gin.Context) {
-	type Num struct {
-		Id int64 `form:"id" validate:"required,min=0"`
-	}
-	var data Num
+
+	var data model.TableID
 	var serviceData, commentsData []map[string]interface{}
 	var infoData, showInfo map[string]interface{}
 	var code int
 	var msg string
 	if err := ctx.ShouldBindQuery(&data); err != nil {
-		ginBindError(ctx, err, "GetAdvisorInfo", data)
+		ginBindError(ctx, err, data)
 	}
 	defer func() {
-		if code != errmsg.SUCCESS {
-			logger.Log.Warn(errmsg.GetErrMsg(code))
-		}
+		commonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg,
+			// TODO
 			map[string]interface{}{
 				"info":        tools.TransformData(infoData),
 				"service":     tools.TransformDataSlice(serviceData),
@@ -149,18 +145,17 @@ func GetAdvisorInfo(ctx *gin.Context) {
 		)
 	}()
 	// 字段基础校验
-	if msg, code := validator.Validate(data); code != errmsg.SUCCESS {
-		commonReturn(ctx, code, msg, data)
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
 	}
 	// 先拿顾问的info
-	if code, infoData = service.GetManyTableItemsById(service.ADVISORTABLE, data.Id, []string{"*"}); code == errmsg.SUCCESS {
+	if code, infoData = service.GetTableItemsById(service.ADVISORTABLE, data.Id, []string{"*"}); code == errmsg.SUCCESS {
 		// 在拿用户的服务
 		code, serviceData = service.GetAdvisorService(data.Id)
 	}
 	delete(infoData, "password")
 	infoData["coin"] = tools.ConvertCoinI2F(infoData["coin"].(int64))
-	// week3 更详细的信息
+	// week3 更详细的信息 TODO
 	// 评分
 	showInfo = map[string]interface{}{}
 	if code, showInfo["score"] = service.GetAdvisorScore(data.Id); code != errmsg.SUCCESS {
@@ -215,16 +210,13 @@ func ModifyAdvisorStatus(ctx *gin.Context) {
 	var data model.ServiceState
 
 	if err := ctx.ShouldBind(&data); err != nil {
-		ginBindError(ctx, err, "ModifyAdvisorStatus", data)
+		ginBindError(ctx, err, data)
 		return
 	}
-	data.Id = ctx.GetInt64("id")
-
+	data.AdvisorId = ctx.GetInt64("id")
 	// return func
 	defer func() {
-		if code != errmsg.SUCCESS {
-			logger.Log.Warn(errmsg.GetErrMsg(code))
-		}
+		commonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 输入校验后执行业务逻辑
@@ -232,7 +224,7 @@ func ModifyAdvisorStatus(ctx *gin.Context) {
 		return
 	}
 	// 更新
-	code = service.UpdateTableItem(service.ADVISORTABLE, data.Id,
+	code = service.UpdateTableItemById(service.ADVISORTABLE, data.AdvisorId,
 		map[string]interface{}{"status": data.Status})
 	return
 }

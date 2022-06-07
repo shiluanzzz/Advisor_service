@@ -2,33 +2,42 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"service/model"
-	"service/service"
-	"service/utils/errmsg"
-	"service/utils/validator"
+	"service-backend/model"
+	"service-backend/service"
+	"service-backend/utils/errmsg"
+	"service-backend/utils/tools"
+	"service-backend/utils/validator"
 )
 
 // ModifyServiceStatus 修改顾客的服务状态
 func ModifyServiceStatus(ctx *gin.Context) {
-	type serviceStatus struct {
-		AdvisorId     int64 `json:"advisorId"`
-		ServiceNameId int   `form:"serviceNameId" json:"serviceNameId" validate:"required,number,lte=4"`
-		Status        int   `form:"status" json:"status" validate:"number,min=0,max=1"`
-	}
-	var data serviceStatus
+
+	var data model.ServiceState
 	var msg string
 	var code int
 	if err := ctx.ShouldBind(&data); err != nil {
-		ginBindError(ctx, err, "ModifyServiceStatus", data)
+		ginBindError(ctx, err, data)
 		return
 	}
+	defer func() {
+		commonControllerLog(&code, &msg, data, data)
+		commonReturn(ctx, code, msg, data)
+	}()
+
 	// 数据校验
-	if msg, code = validator.Validate(data); code == errmsg.SUCCESS {
-		// 修改状态
-		data.AdvisorId = ctx.GetInt64("id")
-		code = service.ModifyServiceStatus(data.AdvisorId, data.ServiceNameId, data.Status)
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
+		return
 	}
-	commonReturn(ctx, code, msg, data)
+	// 修改状态
+	data.AdvisorId = ctx.GetInt64("id")
+	where := map[string]interface{}{
+		"service_name_id": data.ServiceNameId,
+		"advisor_id":      data.AdvisorId,
+	}
+	updates := map[string]interface{}{
+		"status": data.Status,
+	}
+	code = service.UpDateTableItemByWhere(service.SERVICETABLE, where, updates)
 	return
 }
 
@@ -39,15 +48,27 @@ func ModifyServicePrice(ctx *gin.Context) {
 	var msg string
 	var code int
 	if err := ctx.ShouldBind(&data); err != nil {
-		ginBindError(ctx, err, "ModifyServiceStatus", data)
+		ginBindError(ctx, err, data)
 		return
 	}
+	defer func() {
+		commonControllerLog(&code, &msg, data, data)
+		commonReturn(ctx, code, msg, data)
+	}()
+
 	data.AdvisorId = ctx.GetInt64("id")
 	// 数据校验
-	if msg, code = validator.Validate(data); code == errmsg.SUCCESS {
-		// 修改价格
-		code = service.ModifyServicePrice(data.AdvisorId, data.ServiceID, data.Price)
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
+		return
 	}
-	commonReturn(ctx, code, msg, data)
+	// 修改价格
+	where := map[string]interface{}{
+		"service_name_id": data.ServiceNameId,
+		"advisor_id":      data.AdvisorId,
+	}
+	updates := map[string]interface{}{
+		"price": tools.ConvertCoinF2I(data.Price),
+	}
+	code = service.UpDateTableItemByWhere(service.SERVICETABLE, where, updates)
 	return
 }

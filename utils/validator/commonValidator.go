@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"reflect"
-	"service/utils/errmsg"
-	"service/utils/logger"
+	"service-backend/utils/errmsg"
+	"service-backend/utils/logger"
 )
 
 func CallFunc(m map[string]interface{}, name string, params ...interface{}) (string, int) {

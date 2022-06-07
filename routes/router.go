@@ -3,12 +3,12 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"log"
-	"service/middleware"
-	"service/service"
-	"service/utils"
-	"service/utils/logger"
+	"service-backend/middleware"
+	"service-backend/service"
+	"service-backend/utils"
+	"service-backend/utils/logger"
 )
-import v1 "service/controller/v1"
+import v1 "service-backend/controller/v1"
 
 func InitRouter() {
 	r := gin.New()
@@ -16,7 +16,7 @@ func InitRouter() {
 	r.Use(middleware.Log())
 	UserRouter := r.Group("user")
 	{
-		UserRouter.POST("/add", v1.NewUser)
+		UserRouter.POST("/add", v1.NewUserController)
 		UserRouter.GET("/login", v1.UserLoginController)
 		UserRouter.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.USERTABLE))
 		UserRouter.POST("/pwd", v1.UpdateUserPwd)
@@ -46,7 +46,7 @@ func InitRouter() {
 		// advisor
 		order.GET("/list", v1.GetOrderListController)
 		order.POST("/reply", v1.OrderReplyController)
-		order.GET("/detail/:id", v1.GetOrderDetailController)
+		order.GET("/detail", v1.GetOrderDetailController)
 	}
 	orderUser := r.Group("order")
 	orderUser.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.USERTABLE))
@@ -55,6 +55,12 @@ func InitRouter() {
 		orderUser.POST("/add", v1.NewOrderController)
 		orderUser.POST("/rush", v1.RushOrderController)
 		orderUser.POST("/comment", v1.CommentOrderController)
+	}
+	collection := r.Group("collection")
+	collection.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.USERTABLE))
+	{
+		collection.GET("/list", v1.GetUserCollectionController)
+		collection.POST("/add", v1.NewCollectionController)
 	}
 	logger.Log.Info("服务启动")
 	err := r.Run(utils.HttpPort)

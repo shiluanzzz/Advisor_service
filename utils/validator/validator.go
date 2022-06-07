@@ -6,7 +6,7 @@ import (
 	uTran "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	zhTrans "github.com/go-playground/validator/v10/translations/zh"
-	"service/utils/errmsg"
+	"service-backend/utils/errmsg"
 )
 
 func Validate(data interface{}) (string, int) {

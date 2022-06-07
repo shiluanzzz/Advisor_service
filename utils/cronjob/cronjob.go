@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
-	"service/model"
-	"service/service"
-	"service/utils"
-	"service/utils/errmsg"
-	"service/utils/logger"
+	"service-backend/model"
+	"service-backend/service"
+	"service-backend/utils"
+	"service-backend/utils/errmsg"
+	"service-backend/utils/logger"
 	"time"
 )
 

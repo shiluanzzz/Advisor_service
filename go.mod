@@ -1,4 +1,4 @@
-module service
+module service-backend
 
 go 1.18
 

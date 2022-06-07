@@ -2,7 +2,8 @@ package logger
 
 import (
 	"fmt"
-	"service/utils"
+	"service-backend/utils"
+	"service-backend/utils/tools"
 
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
@@ -56,6 +57,7 @@ func getLogEncoder() zapcore.Encoder {
 		// 开发环境下直接打印查看
 		return zapcore.NewConsoleEncoder(encoderConfig)
 	default:
+
 		return zapcore.NewJSONEncoder(encoderConfig)
 	}
 }
@@ -69,9 +71,9 @@ func getLogWriter(filepath string) zapcore.WriteSyncer {
 	})
 }
 
-func GendryBuildError(funcName string, err error, args ...interface{}) {
+func GendryBuildError(err error, args ...interface{}) {
 	fields := []zapcore.Field{
-		zap.String("function", funcName),
+		zap.String("function", tools.WhoCallMe()),
 		zap.Error(err),
 	}
 	for i := 0; i < len(args)-1; i += 2 {
@@ -79,9 +81,9 @@ func GendryBuildError(funcName string, err error, args ...interface{}) {
 	}
 	Log.Error("Gendry build SQL错误", fields...)
 }
-func GendryScannerError(funcName string, err error, args ...interface{}) {
+func GendryScannerError(err error, args ...interface{}) {
 	fields := []zapcore.Field{
-		zap.String("function", funcName),
+		zap.String("function", tools.WhoCallMe()),
 		zap.Error(err),
 	}
 	for i := 0; i < len(args)-1; i += 2 {
@@ -89,13 +91,13 @@ func GendryScannerError(funcName string, err error, args ...interface{}) {
 	}
 	Log.Error("Gendry scanner 绑定数据错误", fields...)
 }
-func SqlError(funcName string, kind string, err error, args ...interface{}) {
+func SqlError(err error, args ...interface{}) {
 	fields := []zapcore.Field{
-		zap.String("function", funcName),
+		zap.String("function", tools.WhoCallMe()),
 		zap.Error(err),
 	}
 	for i := 0; i < len(args)-1; i += 2 {
 		fields = append(fields, zap.String(fmt.Sprintf("%v", args[i]), fmt.Sprintf("%v", args[i+1])))
 	}
-	Log.Error(fmt.Sprintf("mysql %s error", kind), fields...)
+	Log.Error(fmt.Sprintf("mysql error"), fields...)
 }

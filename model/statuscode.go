@@ -1,61 +1,66 @@
 package model
 
-import "fmt"
+// OrderStatus 订单状态
+type OrderStatus int
 
-// 订单状态
 const (
-	Pending = iota
-	Rush
-	Expired
-	Completed
+	Pending   OrderStatus = 0
+	Rush      OrderStatus = 1
+	Expired   OrderStatus = 2
+	Completed OrderStatus = 3
 )
 
-var statusName = map[int]string{
-	Pending:   "Pending",
-	Rush:      "Rush",
-	Expired:   "Expired",
-	Completed: "Completed",
-}
-
-func GetOrderStatusNameById(id int) string {
-	if res := statusName[id]; res != "" {
-		return res
-	} else {
-		return fmt.Sprintf("状态%d不存在", id)
+func (o OrderStatus) StatusName() string {
+	switch o {
+	case Pending:
+		return "Pending"
+	case Rush:
+		return "Rush"
+	case Expired:
+		return "Expired"
+	case Completed:
+		return "Completed"
+	default:
+		return ""
 	}
 }
-func GetOrderEnableReplyId() []int {
-	return []int{
-		Rush, Pending,
-	}
+func (o OrderStatus) CanReply() bool {
+	return o == Rush || o == Pending
+}
+func (o OrderStatus) CanRush() bool {
+	return o == Pending
 }
 
-// 用户性别枚举
-const (
-	Unknown = iota
-	Male
-	Female
-)
-
-var genderName = map[int]string{
-	Male:    "Male",
-	Female:  "Female",
-	Unknown: "Not Specified",
-}
-
-func GetGenderNameById(id int) string {
-	if res := genderName[id]; res != "" {
-		return res
-	} else {
-		return fmt.Sprintf("性别%d不存在", id)
-	}
-}
+// OrderCommentStatus 订单回复状态
+type OrderCommentStatus int
 
 // 订单回复状态枚举
 const (
-	NotComment = iota
-	Commented
+	NotComment OrderCommentStatus = 0
+	Commented  OrderCommentStatus = 1
 )
+
+// GendryEnum 用户性别枚举
+type GendryEnum int
+
+const (
+	Unknown GendryEnum = 0
+	Male    GendryEnum = 1
+	Female  GendryEnum = 2
+)
+
+func (g GendryEnum) StatusName() string {
+	switch g {
+	case Male:
+		return "Male"
+	case Female:
+		return "Female"
+	case Unknown:
+		return "Not Specified"
+	default:
+		return ""
+	}
+}
 
 // 顾问服务状态枚举
 const (

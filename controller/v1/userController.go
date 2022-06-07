@@ -3,13 +3,11 @@ package v1
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
-	"service/model"
-	"service/service"
-	"service/utils/errmsg"
-	"service/utils/logger"
-	"service/utils/tools"
-	"service/utils/validator"
+	"service-backend/model"
+	"service-backend/service"
+	"service-backend/utils/errmsg"
+	"service-backend/utils/tools"
+	"service-backend/utils/validator"
 )
 
 func UpdateUserInfoController(ctx *gin.Context) {
@@ -17,16 +15,12 @@ func UpdateUserInfoController(ctx *gin.Context) {
 	var code int
 	var msg string
 	var res map[string]interface{}
-	//mapData := make(map[string]interface{}, 8)
-	// 数据绑定,通过结构体绑定数据,如果数据输入不对在这里就会报错return
 	if err := ctx.ShouldBindJSON(&data); err != nil {
-		ginBindError(ctx, err, "UpdateUserInfoController", &data)
+		ginBindError(ctx, err, &data)
 		return
 	}
 	defer func() {
-		if code != errmsg.SUCCESS {
-			logger.Log.Warn(errmsg.GetErrMsg(code))
-		}
+		commonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 将结构体中非nil的字段提取到map中
@@ -43,6 +37,7 @@ func UpdateUserInfoController(ctx *gin.Context) {
 		"coin":   validator.CoinFunc,
 	}
 	for key, value := range res {
+		// 对更新的字段逐个做校验
 		if msg, code = validator.CallFunc(validateFunc, key, value); code != errmsg.SUCCESS {
 			return
 		}
@@ -64,36 +59,41 @@ func UpdateUserInfoController(ctx *gin.Context) {
 		res["coin"] = tools.ConvertCoinF2I(*(res["coin"].(*float32)))
 	}
 	// 更新
-	code = service.Update(service.USERTABLE, res)
+	code = service.UpdateTableItemById(service.USERTABLE, ctx.GetInt64("id"), res)
 	return
 }
-func NewUser(ctx *gin.Context) {
-	var table = service.USERTABLE
+func NewUserController(ctx *gin.Context) {
 	var data model.Login
+	var code int
+	var msg string
 	// 数据绑定
-	err := ctx.ShouldBindJSON(&data)
-	if err != nil {
-		ginBindError(ctx, err, "NewUser", data)
+	if err := ctx.ShouldBindJSON(&data); err != nil {
+		ginBindError(ctx, err, data)
 		return
 	}
-	// 数据校验
-	msg, code := validator.Validate(data)
-	// 数据不合法
-	if code != errmsg.SUCCESS {
-		logger.Log.Warn("数据校验非法", zap.Error(err))
+	defer func() {
+		commonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
+	}()
+	// 数据校验
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
 	}
 	// 调用service层 检查手机号是否重复
-	code = service.CheckPhoneExist(table, data.Phone)
-	if code == errmsg.SUCCESS {
-		// 用户密码加密存储
-		data.Password = service.GetPwd(data.Password)
-		code, data.Id = service.NewUser(table, &data, nil)
-		logger.Log.Info("新增用户", zap.String("phone", data.Phone))
+	//code = service.CheckPhoneExist(service.USERTABLE, data.Phone)
+	code, _ = service.GetTableItemByWhere(service.USERTABLE, map[string]interface{}{
+		"phone": data.Phone,
+	}, "phone")
+	if code != errmsg.ErrorMysqlNoRows {
+		code = errmsg.ErrorUserPhoneUsed
+		return
 	}
-	// success
-	commonReturn(ctx, code, msg, data)
+	// 用户密码加密存储
+	data.Password = service.GetPwd(data.Password)
+	insertMap := tools.Structs2SQLTable(data)
+	code, data.Id = service.InsertTableItem(service.USERTABLE, []map[string]interface{}{insertMap})
+	//code, data.Id = service.NewUserController(service.USERTABLE, &data, nil)
+	//logger.Log.Info("新增用户", zap.String("phone", data.Phone))
 	return
 }
 
@@ -109,7 +109,7 @@ func UserLoginController(ctx *gin.Context) {
 
 func GetUserInfoController(ctx *gin.Context) {
 	id := ctx.GetInt64("id")
-	code, data := service.GetUserInfo(id)
+	code, data := service.GetUser(id)
 	commonReturn(ctx, code, "", data)
 	return
 }

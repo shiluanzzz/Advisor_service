@@ -2,12 +2,11 @@ package tools
 
 import (
 	"encoding/json"
-	"fmt"
-	"go.uber.org/zap"
+	"github.com/fatih/structs"
 	"reflect"
-	"service/utils"
-	"service/utils/errmsg"
-	"service/utils/logger"
+	"runtime"
+	"service-backend/utils"
+	"service-backend/utils/errmsg"
 	"strings"
 	"unicode"
 )
@@ -84,7 +83,7 @@ func StructToMap(in interface{}, tagName string) (map[string]interface{}, int) {
 func Structs2Map(data interface{}) (err error, res map[string]interface{}) {
 	defer func() {
 		if err != nil {
-			logger.Log.Error(" 结构体转化为map失败", zap.String("data", fmt.Sprintf("%v", data)))
+			//logger.Log.Error(" 结构体转化为map失败", zap.String("data", fmt.Sprintf("%v", data)))
 		}
 	}()
 	var b []byte
@@ -103,4 +102,21 @@ func ConvertCoinF2I(coin float32) int64 {
 // ConvertCoinI2F  转化金币INT-> 浮点 展示
 func ConvertCoinI2F(coin int64) float32 {
 	return float32(coin) / float32(utils.CoinBase)
+}
+
+// WhoCallMe 显示上一层调用该函数的方法名
+func WhoCallMe() string {
+	pc, _, _, _ := runtime.Caller(2)
+	return runtime.FuncForPC(pc).Name()
+}
+
+// Structs2SQLTable 将结构体实例中的带有structs tag字段的值提取为map
+func Structs2SQLTable(s interface{}) map[string]interface{} {
+	out := structs.Map(s)
+	for k := range out {
+		if unicode.IsUpper([]rune(k)[0]) {
+			delete(out, k)
+		}
+	}
+	return out
 }

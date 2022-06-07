@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
-	"service/utils/logger"
+	"service-backend/utils/logger"
 	"time"
 )
 

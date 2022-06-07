@@ -2,10 +2,10 @@ package main
 
 import (
 	"go.uber.org/zap"
-	"service/routes"
-	"service/utils"
-	"service/utils/cronjob"
-	"service/utils/logger"
+	"service-backend/routes"
+	"service-backend/utils"
+	"service-backend/utils/cronjob"
+	"service-backend/utils/logger"
 )
 
 func main() {

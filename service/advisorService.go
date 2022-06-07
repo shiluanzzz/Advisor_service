@@ -2,11 +2,9 @@ package service
 
 import (
 	"fmt"
-	"go.uber.org/zap"
-	"service/model"
-	"service/utils"
-	"service/utils/errmsg"
-	"service/utils/logger"
+	"service-backend/model"
+	"service-backend/utils"
+	"service-backend/utils/errmsg"
 	"time"
 )
 
@@ -27,25 +25,19 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 func NewAdvisorAndService(data *model.Login) (code int, id int64) {
 	id = -1
 	begin, err := utils.DbConn.Begin()
-	defer func() {
-		if code != errmsg.SUCCESS {
-			err = begin.Rollback()
-			logger.Log.Error("事务回滚失败!", zap.Error(err))
-		}
-	}()
+	defer CommonTranDefer(&code, begin)
 	if err != nil {
 		return errmsg.ErrorSqlTransError, -1
 	}
-	code, id = NewUser(ADVISORTABLE, data, begin)
-	if code != errmsg.SUCCESS {
-		// 创建顾问失败
+	// 新建用户
+	if code, id = NewUser(ADVISORTABLE, data, begin); code != errmsg.SUCCESS {
 		return errmsg.ErrorSqlTransError, -1
 	}
-	code = NewService(id, begin)
-	if code != errmsg.SUCCESS {
-		// 顾问的服务项创建失败
+	// 顾问的服务项创建失败
+	if code = NewService(id, begin); code != errmsg.SUCCESS {
 		return errmsg.ErrorSqlTransError, -1
 	}
+	// commit
 	err = begin.Commit()
 	if err != nil {
 		return errmsg.ErrorSqlTransCommitError, -1
@@ -53,7 +45,7 @@ func NewAdvisorAndService(data *model.Login) (code int, id int64) {
 	return errmsg.SUCCESS, id
 }
 
-// GetAdvisorScore 获取顾问的评分
+// GetAdvisorScore 获取顾问的评分 TODO
 func GetAdvisorScore(id int64) (code int, score float32) {
 	score = 0.0
 	where := map[string]interface{}{
@@ -75,7 +67,7 @@ func GetAdvisorScore(id int64) (code int, score float32) {
 	return errmsg.SUCCESS, score
 }
 
-//
+// TODO
 func GetAdvisorCommentData(id int64) (code int, res []map[string]interface{}) {
 	where := map[string]interface{}{
 		"advisor_id":     id,
@@ -93,7 +85,8 @@ func GetAdvisorCommentData(id int64) (code int, res []map[string]interface{}) {
 			return
 		}
 		v["user_name"] = fmt.Sprintf("%s", userNameUint8)
-		v["service_name"] = model.ServiceKind[int(v["service_id"].(int64))]
+		// TODO
+		//v["service_name"] = model.ServiceKind[int(v["service_id"].(int64))]
 		v["create_show_time"] = time.Unix(v["create_time"].(int64), 0).Format("Jan 02,2006 15:04:05")
 		v["comment_show_time"] = time.Unix(v["comment_time"].(int64), 0).Format("Jan 02,2006 15:04:05")
 	}

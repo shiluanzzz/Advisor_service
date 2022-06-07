@@ -16,6 +16,7 @@ const (
 	ErrorInput
 	ErrorUpdateValid
 	ErrorAdvisorNotExist
+	ErrorMysqlNoRows
 )
 
 // 服务器内部错误,SQL编译等
@@ -83,6 +84,7 @@ var errMsg = map[int]string{
 	ErrorAdvisorNotExist: "顾问不存在",
 	ErrorInput:           "输入不符合要求!",
 	ErrorUpdateValid:     "不允许直接更新Coin或密码字段",
+	ErrorMysqlNoRows:     "没有查询到结果",
 	//服务器内部错误
 	ErrorSqlBuild:             "gendry库SQL编译错误",
 	ErrorMysql:                "数据库操作错误",
