@@ -1,56 +1,54 @@
 package tools
 
 import (
-	"encoding/json"
 	"github.com/fatih/structs"
 	"reflect"
 	"runtime"
 	"service-backend/utils"
 	"service-backend/utils/errmsg"
-	"strings"
 	"unicode"
 )
 
-// LowFirst 首字母小写 SomeThing->someThing
-func LowFirst(str string) string {
-	for i, v := range str {
-		return string(unicode.ToLower(v)) + str[i+1:]
-	}
-	return ""
-}
+//// LowFirst 首字母小写 SomeThing->someThing
+//func LowFirst(str string) string {
+//	for i, v := range str {
+//		return string(unicode.ToLower(v)) + str[i+1:]
+//	}
+//	return ""
+//}
 
-// Case2CamelCase 蛇形转驼峰 some_thing -> someThing
-func Case2CamelCase(str string) string {
-	str = strings.Replace(str, "_", " ", -1)
-	str = strings.Title(str)
-	str = strings.Replace(str, " ", "", -1)
-	return LowFirst(str)
-}
+//// Case2CamelCase 蛇形转驼峰 some_thing -> someThing
+//func Case2CamelCase(str string) string {
+//	str = strings.Replace(str, "_", " ", -1)
+//	str = strings.Title(str)
+//	str = strings.Replace(str, " ", "", -1)
+//	return LowFirst(str)
+//}
 
-// TransformDataSlice 把数据转换为小驼峰返回
-func TransformDataSlice(data []map[string]interface{}) []map[string]interface{} {
-	var res []map[string]interface{}
-	for _, each := range data {
-		res = append(res, TransformData(each))
-	}
-	return res
-}
-
-// TransformData 数据的key转化为小驼峰返回
-func TransformData(data map[string]interface{}) map[string]interface{} {
-	t := map[string]interface{}{}
-	for k, v := range data {
-		t[Case2CamelCase(k)] = v
-	}
-	return t
-}
-func TransformStruct(data interface{}) map[string]interface{} {
-	err, res := Structs2Map(data)
-	if err != nil {
-		return nil
-	}
-	return TransformData(res)
-}
+//// TransformDataSlice 把数据转换为小驼峰返回
+//func TransformDataSlice(data []map[string]interface{}) []map[string]interface{} {
+//	var res []map[string]interface{}
+//	for _, each := range data {
+//		res = append(res, TransformData(each))
+//	}
+//	return res
+//}
+//
+//// TransformData 数据的key转化为小驼峰返回
+//func TransformData(data map[string]interface{}) map[string]interface{} {
+//	t := map[string]interface{}{}
+//	for k, v := range data {
+//		t[Case2CamelCase(k)] = v
+//	}
+//	return t
+//}
+//func TransformStruct(data interface{}) map[string]interface{} {
+//	err, res := Structs2Map(data)
+//	if err != nil {
+//		return nil
+//	}
+//	return TransformData(res)
+//}
 
 // StructToMap 结构体转为Map[string]interface{},忽略nil指针
 func StructToMap(in interface{}, tagName string) (map[string]interface{}, int) {
@@ -80,19 +78,19 @@ func StructToMap(in interface{}, tagName string) (map[string]interface{}, int) {
 	return out, errmsg.SUCCESS
 }
 
-func Structs2Map(data interface{}) (err error, res map[string]interface{}) {
-	defer func() {
-		if err != nil {
-			//logger.Log.Error(" 结构体转化为map失败", zap.String("data", fmt.Sprintf("%v", data)))
-		}
-	}()
-	var b []byte
-	if b, err = json.Marshal(data); err != nil {
-		return err, nil
-	}
-	err = json.Unmarshal(b, &res)
-	return err, res
-}
+//func Structs2Map(data interface{}) (err error, res map[string]interface{}) {
+//	defer func() {
+//		if err != nil {
+//			//logger.Log.Error(" 结构体转化为map失败", zap.String("data", fmt.Sprintf("%v", data)))
+//		}
+//	}()
+//	var b []byte
+//	if b, err = json.Marshal(data); err != nil {
+//		return err, nil
+//	}
+//	err = json.Unmarshal(b, &res)
+//	return err, res
+//}
 
 // ConvertCoinF2I 转化金币浮点->INT 入库
 func ConvertCoinF2I(coin float32) int64 {
@@ -113,6 +111,8 @@ func WhoCallMe() string {
 // Structs2SQLTable 将结构体实例中的带有structs tag字段的值提取为map
 func Structs2SQLTable(s interface{}) map[string]interface{} {
 	out := structs.Map(s)
+
+	// key为大写开头，说明不包含structs这个tag，这个item不需要入库
 	for k := range out {
 		if unicode.IsUpper([]rune(k)[0]) {
 			delete(out, k)

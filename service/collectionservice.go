@@ -9,7 +9,6 @@ import (
 const COLLECTIONTABLE = "collection"
 
 func NewCollection(data *model.Collection) (code int, res *model.Collection) {
-	//res = structs.Map(data)
 	maps := tools.Structs2SQLTable(data)
 	code, data.Id = InsertTableItem(COLLECTIONTABLE, []map[string]interface{}{maps})
 	return code, data
