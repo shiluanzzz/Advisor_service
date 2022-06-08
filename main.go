@@ -12,6 +12,9 @@ func main() {
 	utils.InitDB()
 	cronjob.InitCronJob()
 	routes.InitRouter()
+
+	//code := service.UpdateAdvisorIndicators(30001)
+	//fmt.Println(errmsg.GetErrMsg(code))
 	defer func() {
 		err := utils.DbConn.Close()
 		if err != nil {

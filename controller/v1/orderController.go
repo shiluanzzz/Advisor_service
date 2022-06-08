@@ -38,7 +38,7 @@ func NewOrderController(ctx *gin.Context) {
 	defer func() {
 		orderInfo.OrderId = response.Id
 		orderInfo.UserId = response.UserId
-		commonControllerLog(&code, &msg, orderInfo, response)
+		logger.CommonControllerLog(&code, &msg, orderInfo, response)
 		commonReturn(ctx, code, msg, orderInfo)
 	}()
 	// 数据基本校验
@@ -82,7 +82,10 @@ func NewOrderController(ctx *gin.Context) {
 	if code, response.Id = service.NewOrderAndCostTrans(&response); code != errmsg.SUCCESS {
 		return
 	}
-
+	// 新建订单后更新顾问信息的指标
+	if code = service.UpdateAdvisorIndicators(response.AdvisorId); code != errmsg.SUCCESS {
+		return
+	}
 	// 订单状态24h后过期 新建一个监控事务
 	job := cronjob.CronJob{
 		OrderId:    response.Id,
@@ -100,11 +103,11 @@ func NewOrderController(ctx *gin.Context) {
 
 // GetOrderListController 获取顾问的订单列表
 func GetOrderListController(ctx *gin.Context) {
-	var response []model.Order
+	var response []*model.Order
 	var code int
 	var msg string
 	defer func() {
-		commonControllerLog(&code, &msg, ctx.GetInt64("id"), response)
+		logger.CommonControllerLog(&code, &msg, ctx.GetInt64("id"), response)
 		commonReturn(ctx, code, "", response)
 	}()
 	code, response = service.GetAdvisorOrderList(ctx.GetInt64("id"))
@@ -114,7 +117,12 @@ func GetOrderListController(ctx *gin.Context) {
 // GetOrderDetailController 获取订单详情
 func GetOrderDetailController(ctx *gin.Context) {
 	var request model.TableID
-	var response model.Order
+	var order model.Order
+	var user model.User
+	response := map[string]interface{}{
+		"orderInfo": &order,
+		"userInfo":  &user,
+	}
 	var code int
 	var msg string
 	if err := ctx.ShouldBindQuery(&request); err != nil {
@@ -122,28 +130,27 @@ func GetOrderDetailController(ctx *gin.Context) {
 	}
 	// return
 	defer func() {
-		commonControllerLog(&code, &msg, request, response)
+		logger.CommonControllerLog(&code, &msg, request, response)
 		commonReturn(ctx, code, "", response)
 	}()
 	if msg, code = validator.Validate(request); code != errmsg.SUCCESS {
 		return
 	}
 	// 逻辑校验 直接拿数据然后
-	if code, response = service.GetOrder(request.Id); code != errmsg.SUCCESS {
+	if code, order = service.GetOrder(request.Id); code != errmsg.SUCCESS {
 		return
 	}
 	// 订单是不是你的
-	if response.AdvisorId != ctx.GetInt64("id") {
+	if order.AdvisorId != ctx.GetInt64("id") {
 		code = errmsg.ErrorOrderIdNotMatchWithAdvisorID
-		response = model.Order{}
 		return
 	}
 	//在基础的信息上扩充用户的相关信息
-	if code, response.User = service.GetUser(response.UserId); code != errmsg.SUCCESS {
+	if code, user = service.GetUser(order.UserId); code != errmsg.SUCCESS {
 		return
 	}
 	// 修正生日的显示格式
-	response.User.UpdateShow("Jan 02,2006")
+	user.UpdateShow("Jan 02,2006")
 
 	return
 }
@@ -167,7 +174,7 @@ func OrderReplyController(ctx *gin.Context) {
 	}
 	// return
 	defer func() {
-		commonControllerLog(&code, &msg, data, response)
+		logger.CommonControllerLog(&code, &msg, data, response)
 		commonReturn(ctx, code, "", response)
 	}()
 	// 逻辑校验+service层提交
@@ -197,7 +204,13 @@ func OrderReplyController(ctx *gin.Context) {
 			Status:    orderInSql.Status,
 		}
 		// 提交到service层
-		code = service.ReplyOrderServiceTrans(&response)
+		if code = service.ReplyOrderServiceTrans(&response); code != errmsg.SUCCESS {
+			return
+		}
+		// 回复订单后更新指标
+		if code = service.UpdateAdvisorIndicators(response.AdvisorId); code != errmsg.SUCCESS {
+			return
+		}
 		return
 	}()
 	return
@@ -215,7 +228,7 @@ func RushOrderController(ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, "", data)
 	}()
 
@@ -283,7 +296,7 @@ func CommentOrderController(ctx *gin.Context) {
 	}
 	// defer return
 	defer func() {
-		commonControllerLog(&code, &msg, comment, data)
+		logger.CommonControllerLog(&code, &msg, comment, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 数据基本校验
@@ -293,9 +306,12 @@ func CommentOrderController(ctx *gin.Context) {
 	}
 	// 构造
 	data = model.OrderComment{
-		CommentStruct: comment,
-		UserId:        ctx.GetInt64("id"),
-		CommentTime:   time.Now().Unix(),
+		Id:      comment.Id,
+		Comment: comment.Comment,
+		Rate:    comment.Rate,
+		//CommentStruct: comment,
+		UserId:      ctx.GetInt64("id"),
+		CommentTime: time.Now().Unix(),
 	}
 	/*  ---  逻辑校验  ---  */
 	var orderInSql model.Order
@@ -320,13 +336,18 @@ func CommentOrderController(ctx *gin.Context) {
 	/*  ---  逻辑校验  ---  */
 
 	// 更新数据
-	code = service.UpdateTableItemById(service.ORDERTABLE, data.Id,
-		map[string]interface{}{
-			"comment_time":   data.CommentTime,
-			"comment":        data.Comment,
-			"rate":           data.Rate,
-			"comment_status": model.Commented,
-		},
-	)
+	newData := map[string]interface{}{
+		"comment_time":   data.CommentTime,
+		"comment":        data.Comment,
+		"rate":           data.Rate,
+		"comment_status": model.Commented,
+	}
+	if code = service.UpdateTableItemById(service.ORDERTABLE, data.Id, newData); code != errmsg.SUCCESS {
+		return
+	}
+	// 评论订单后更新指标
+	if code = service.UpdateAdvisorIndicators(orderInSql.AdvisorId); code != errmsg.SUCCESS {
+		return
+	}
 	return
 }

@@ -28,7 +28,7 @@ func InitRouter() {
 		AdvisorRouter.POST("/add", v1.NewAdvisorController)
 		AdvisorRouter.GET("/login", v1.AdvisorLogin)
 		AdvisorRouter.GET("/list/:page", v1.GetAdvisorList)
-		AdvisorRouter.GET("/getInfo", v1.GetAdvisorInfo)
+		AdvisorRouter.GET("/getInfo", v1.GetAdvisorInfoController)
 		AdvisorRouter.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.ADVISORTABLE))
 		AdvisorRouter.POST("/update", v1.UpdateAdvisorController)
 		AdvisorRouter.POST("/pwd", v1.UpdateAdvisorPwd)

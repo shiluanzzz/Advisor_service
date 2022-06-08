@@ -6,6 +6,7 @@ import (
 	"service-backend/model"
 	"service-backend/service"
 	"service-backend/utils/errmsg"
+	"service-backend/utils/logger"
 	"service-backend/utils/tools"
 	"service-backend/utils/validator"
 	"strconv"
@@ -22,7 +23,7 @@ func NewAdvisorController(ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 数据校验
@@ -49,7 +50,7 @@ func NewAdvisorController(ctx *gin.Context) {
 }
 
 func UpdateAdvisorController(ctx *gin.Context) {
-	var data model.Advisor
+	var data model.AdvisorInfo
 	var res map[string]interface{}
 	var code int
 	var msg string
@@ -59,7 +60,7 @@ func UpdateAdvisorController(ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, res)
+		logger.CommonControllerLog(&code, &msg, data, res)
 		commonReturn(ctx, code, msg, res)
 	}()
 	// 将结构体中非nil的字段提取到map中
@@ -121,26 +122,25 @@ func GetAdvisorList(ctx *gin.Context) {
 	commonReturn(ctx, code, "", data)
 }
 
-// GetAdvisorInfo 获取顾问的详细信息
-func GetAdvisorInfo(ctx *gin.Context) {
+// GetAdvisorInfoController 获取顾问的详细信息
+func GetAdvisorInfoController(ctx *gin.Context) {
 
 	var data model.TableID
-	var serviceData, commentsData []map[string]interface{}
-	var infoData, showInfo map[string]interface{}
+	var serviceData []*model.Service
+	var comment []*model.OrderComment
+	var info model.Advisor
 	var code int
 	var msg string
 	if err := ctx.ShouldBindQuery(&data); err != nil {
 		ginBindError(ctx, err, data)
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg,
-			// TODO
 			map[string]interface{}{
-				"info":        tools.TransformData(infoData),
-				"service":     tools.TransformDataSlice(serviceData),
-				"showing":     tools.TransformData(showInfo),
-				"commentData": tools.TransformDataSlice(commentsData),
+				"info":     info,
+				"services": serviceData,
+				"comments": comment,
 			},
 		)
 	}()
@@ -148,58 +148,16 @@ func GetAdvisorInfo(ctx *gin.Context) {
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
 	}
-	// 先拿顾问的info
-	if code, infoData = service.GetTableItemsById(service.ADVISORTABLE, data.Id, []string{"*"}); code == errmsg.SUCCESS {
-		// 在拿用户的服务
-		code, serviceData = service.GetAdvisorService(data.Id)
-	}
-	delete(infoData, "password")
-	infoData["coin"] = tools.ConvertCoinI2F(infoData["coin"].(int64))
-	// week3 更详细的信息 TODO
-	// 评分
-	showInfo = map[string]interface{}{}
-	if code, showInfo["score"] = service.GetAdvisorScore(data.Id); code != errmsg.SUCCESS {
+	if code, info = service.GetAdvisor(data.Id); code != errmsg.SUCCESS {
 		return
 	}
-	// 总评论数
-	if code, showInfo["total_comment"] = service.GetTableItemByWhere(service.ORDERTABLE, map[string]interface{}{
-		"status":         model.Completed,
-		"comment_status": model.Commented,
-		"advisor_id":     data.Id,
-	}, "count(id)"); code != errmsg.SUCCESS {
+	if code, comment = service.GetAdvisorCommentData(data.Id); code != errmsg.SUCCESS {
 		return
 	}
-	// 总订单数(readings)
-	if code, showInfo["total_order_num"] = service.GetTableItemByWhere(service.ORDERTABLE, map[string]interface{}{
-		"advisor_id": data.Id,
-		"_or": []map[string]interface{}{
-			{"service_name_id": model.VideoReading},
-			{"service_name_id": model.AudioReading},
-			{"service_name_id": model.TextReading},
-		},
-	}, "count(id)"); code != errmsg.SUCCESS {
+	if code, serviceData = service.GetAdvisorServiceData(data.Id); code != errmsg.SUCCESS {
 		return
 	}
-	// on-time 订单完成数/总订单数
-	var totalOrderCompleted, totalOrderNum interface{}
-	if code, totalOrderCompleted = service.GetTableItemByWhere(service.ORDERTABLE, map[string]interface{}{
-		"advisor_id": data.Id,
-		"status":     model.Completed,
-	}, "count(id)"); code != errmsg.SUCCESS {
-		return
-	}
-	if code, totalOrderNum = service.GetTableItemByWhere(service.ORDERTABLE, map[string]interface{}{
-		"advisor_id": data.Id,
-	}, "count(id)"); code != errmsg.SUCCESS {
-		return
-	}
-	if totalOrderNum.(int64) != 0 {
-		showInfo["on-time"] = float32(totalOrderCompleted.(int64)) / float32(totalOrderNum.(int64))
-	} else {
-		showInfo["on-time"] = 0
-	}
-	// 评论数据
-	code, commentsData = service.GetAdvisorCommentData(data.Id)
+
 	return
 }
 
@@ -216,7 +174,7 @@ func ModifyAdvisorStatus(ctx *gin.Context) {
 	data.AdvisorId = ctx.GetInt64("id")
 	// return func
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 输入校验后执行业务逻辑

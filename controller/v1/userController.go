@@ -6,6 +6,7 @@ import (
 	"service-backend/model"
 	"service-backend/service"
 	"service-backend/utils/errmsg"
+	"service-backend/utils/logger"
 	"service-backend/utils/tools"
 	"service-backend/utils/validator"
 )
@@ -20,7 +21,7 @@ func UpdateUserInfoController(ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 将结构体中非nil的字段提取到map中
@@ -72,7 +73,7 @@ func NewUserController(ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 数据校验

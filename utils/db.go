@@ -23,8 +23,12 @@ func InitDB() {
 	DbConn.SetConnMaxLifetime(100 * time.Second)
 	DbConn.SetMaxIdleConns(20)
 	DbConn.SetMaxOpenConns(20)
+
 	if err != nil {
-		log.Fatalln("database connect error!", err)
+		log.Fatalln("database build error!", err)
+	}
+	if err = DbConn.Ping(); err != nil {
+		log.Fatalln("database connect error", err)
 	}
 	//defer DbConn.Close()
 }

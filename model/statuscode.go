@@ -62,8 +62,28 @@ func (g GendryEnum) StatusName() string {
 	}
 }
 
-// 顾问服务状态枚举
+// ServiceStatusCode 顾问服务状态枚举
+type ServiceStatusCode int
+
 const (
-	AdvisorServiceNotOpen = iota
-	AdvisorServiceOpen
+	AdvisorServiceNotOpen ServiceStatusCode = 0
+	AdvisorServiceOpen    ServiceStatusCode = 1
 )
+
+// LogType 日志分层
+type LogType int
+
+const (
+	ControllerLog LogType = 1
+	ServiceLog    LogType = 2
+)
+
+func (l LogType) StatusName() string {
+	switch l {
+	case ControllerLog:
+		return "controller"
+	case ServiceLog:
+		return "service"
+	}
+	return "unknown"
+}

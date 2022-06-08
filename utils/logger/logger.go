@@ -2,7 +2,9 @@ package logger
 
 import (
 	"fmt"
+	"service-backend/model"
 	"service-backend/utils"
+	"service-backend/utils/errmsg"
 	"service-backend/utils/tools"
 
 	"github.com/natefinch/lumberjack"
@@ -100,4 +102,37 @@ func SqlError(err error, args ...interface{}) {
 		fields = append(fields, zap.String(fmt.Sprintf("%v", args[i]), fmt.Sprintf("%v", args[i+1])))
 	}
 	Log.Error(fmt.Sprintf("mysql error"), fields...)
+}
+
+// CommonControllerLog 控制层的defer Log
+func CommonControllerLog(code *int, msg *string, requests interface{}, response interface{}) {
+	commonLog(model.ControllerLog, code, "caller", tools.WhoCallMe(), "msg", msg, "requests", requests, "response", response)
+}
+
+// CommonServiceLog 服务层的defer Log
+func CommonServiceLog(code *int, input interface{}, args ...interface{}) {
+	//nextArgs := []interface{}{}
+	args = append(args, []interface{}{"caller", tools.WhoCallMe(), "input", input}...)
+	commonLog(model.ServiceLog, code, args...)
+}
+func commonLog(kind model.LogType, code *int, args ...interface{}) {
+	if err := recover(); err != nil {
+		Log.Error("PANIC!", zap.String("panic error", fmt.Sprintf("%v", err)))
+	}
+	fields := []zapcore.Field{
+		zap.String("LogType", kind.StatusName()),
+	}
+	for i := 0; i < len(args); i += 2 {
+		fields = append(fields, zap.String(fmt.Sprintf("%v", args[i]), fmt.Sprintf("%v", args[i+1])))
+	}
+	switch *code {
+	case errmsg.SUCCESS:
+		Log.Info("success", fields...)
+	case errmsg.ERROR:
+		Log.Error("error", fields...)
+	case errmsg.ErrorMysql:
+		Log.Error("error", fields...)
+	default:
+		Log.Warn("warn", fields...)
+	}
 }

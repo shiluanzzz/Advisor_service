@@ -1,10 +1,8 @@
 package v1
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"net/http"
 	"service-backend/middleware"
 	"service-backend/model"
@@ -33,24 +31,6 @@ func ginBindError(ctx *gin.Context, err error, data interface{}) {
 	return
 }
 
-//
-func commonControllerLog(code *int, msg *string, requests interface{}, response interface{}) {
-	if err := recover(); err != nil {
-		logger.Log.Error("PANIC!", zap.String("panic error", fmt.Sprintf("%v", err)))
-	}
-	fields := []zapcore.Field{
-		zap.String("func", tools.WhoCallMe()),
-		zap.String("msg", *msg),
-		zap.String("requests", fmt.Sprintf("%v", requests)),
-		zap.String("response", fmt.Sprintf("%v", response)),
-	}
-	if *code != errmsg.SUCCESS {
-		logger.Log.Warn(errmsg.GetErrMsg(*code), fields...)
-	} else {
-		logger.Log.Info("Controller 调用成功", fields...)
-	}
-}
-
 // Login 用户或者顾问登录
 func Login(table string, ctx *gin.Context) {
 	var data model.Login
@@ -61,7 +41,7 @@ func Login(table string, ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 数据校验
@@ -96,7 +76,7 @@ func UpdatePwdController(table string, ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 	// 数据校验

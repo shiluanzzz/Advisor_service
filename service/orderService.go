@@ -30,6 +30,7 @@ func NewOrderAndCostTrans(model *model.Order) (code int, id int64) {
 	if code, id = NewOrder(model, begin); code != errmsg.SUCCESS {
 		return code, -1
 	}
+
 	// 提交事务
 	if err := begin.Commit(); err != nil {
 		return errmsg.ErrorSqlTransCommitError, -1
@@ -140,7 +141,6 @@ func RushOrderTrans(data *model.OrderRush) (code int) {
 	if code != errmsg.SUCCESS {
 		return code
 	}
-
 	// 事务结束 commit.
 	err = begin.Commit()
 	if err != nil {
@@ -230,11 +230,13 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus model.OrderStat
 	return errmsg.SUCCESS
 }
 
-func GetAdvisorOrderList(advisorId int64) (code int, res []model.Order) {
+func GetAdvisorOrderList(advisorId int64) (code int, res []*model.Order) {
 	where := map[string]interface{}{
 		"advisor_id": advisorId,
 	}
-	code, rows := GetTableRows(ORDERTABLE, where, "*")
+	selects := []string{"id", "user_id", "service_id", "service_name_id",
+		"status", "question", "situation", "advisor_id", "create_time"}
+	code, rows := GetTableRows(ORDERTABLE, where, selects...)
 	err := scanner.Scan(rows, &res)
 	if err != nil {
 		return errmsg.ErrorSqlScanner, nil
@@ -242,19 +244,51 @@ func GetAdvisorOrderList(advisorId int64) (code int, res []model.Order) {
 	// 附加信息:用户名、时间格式、服务类型
 	for _, v := range res {
 		v.ShowTime = time.Unix(v.CreateTime, 0).Format("Jan 02,2006")
-		_, v.UserName = GetTableItem(USERTABLE, v.UserId, "name")
+		_, UserName := GetTableItem(USERTABLE, v.UserId, "name")
+		v.UserName = fmt.Sprintf("%s", UserName)
 		v.ServiceName = model.ServiceKind[v.ServiceNameId]
+		v.ServiceStatusName = v.Status.StatusName()
 	}
 	return code, res
 }
 func GetOrder(orderId int64) (code int, res model.Order) {
+	var err error
+	defer logger.CommonServiceLog(&code, orderId, "err", err)
 	where := map[string]interface{}{
 		"id": orderId,
 	}
-	code, rows := GetTableRows(ORDERTABLE, where, "*")
-	err := scanner.Scan(rows, &res)
-	if err != nil {
+	var rows *sql.Rows
+	if code, rows = GetTableRows(ORDERTABLE, where, "*"); code != errmsg.SUCCESS {
+		return code, res
+	}
+	if err = scanner.Scan(rows, &res); err != nil {
+		// TODO 更新到其他位置
+		if err == scanner.ErrNilRows || err == scanner.ErrEmptyResult {
+			return errmsg.ErrorNoResult, res
+		}
 		return errmsg.ErrorSqlScanner, res
 	}
 	return errmsg.SUCCESS, res
+}
+
+// GetAdvisorOrderScore 获取顾问的订单的评分
+func GetAdvisorOrderScore(id int64) (code int, score float32) {
+	score = 0.0
+	where := map[string]interface{}{
+		"advisor_id":     id,
+		"status":         model.Completed,
+		"comment_status": model.Commented,
+	}
+	selects := []string{"rate"}
+	code, data := GetManyTableItemsByWhere(ORDERTABLE, where, selects)
+	if code != errmsg.SUCCESS {
+		return
+	}
+	if len(data) != 0 {
+		for _, v := range data {
+			score += float32(v["rate"].(int64))
+		}
+		score /= float32(len(data))
+	}
+	return errmsg.SUCCESS, score
 }

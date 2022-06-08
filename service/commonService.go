@@ -140,15 +140,15 @@ func GetTableItem(tableName string, tableId int64, fieldName string, tx ...*sql.
 }
 
 // GetTableRows 获取数据库中的某一行，可以绑定到model上去
-func GetTableRows(tableName string, where map[string]interface{}, fieldName string) (code int, res *sql.Rows) {
+func GetTableRows(tableName string, where map[string]interface{}, fieldName ...string) (code int, res *sql.Rows) {
 	var err error
 	defer func() {
 		if code != errmsg.SUCCESS {
 			logger.Log.Error(fmt.Sprintf("无法从表 [%s] 根据 [%v] 匹配到 [%s] 字段,请检查。", tableName, where, fieldName), zap.Error(err))
 		}
 	}()
-	selects := []string{fieldName}
-	cond, values, err := qb.BuildSelect(tableName, where, selects)
+	//selects := []string{fieldName}
+	cond, values, err := qb.BuildSelect(tableName, where, fieldName)
 	if err != nil {
 		logger.GendryBuildError(err)
 		return errmsg.ErrorSqlBuild, nil
@@ -224,6 +224,8 @@ func GetManyTableItemsByWhere(tableName string, where map[string]interface{}, se
 	}
 	return errmsg.SUCCESS, results
 }
+
+// UpDateTableItemByWhere 通过条件更新表的字段
 func UpDateTableItemByWhere(tableName string, where map[string]interface{}, updates map[string]interface{}, tx ...*sql.Tx) (code int) {
 	defer func() {
 		fields := []zapcore.Field{
@@ -391,6 +393,7 @@ func CommonTranDefer(code *int, Tran *sql.Tx) {
 	}
 }
 
+// SQLExec 执行SQL语句
 func SQLExec(cond string, values []interface{}, tx ...*sql.Tx) (code int, Id int64) {
 	var err error
 	var row sql.Result

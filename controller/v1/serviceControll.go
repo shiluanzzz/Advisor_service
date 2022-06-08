@@ -5,6 +5,7 @@ import (
 	"service-backend/model"
 	"service-backend/service"
 	"service-backend/utils/errmsg"
+	"service-backend/utils/logger"
 	"service-backend/utils/tools"
 	"service-backend/utils/validator"
 )
@@ -20,7 +21,7 @@ func ModifyServiceStatus(ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 
@@ -52,7 +53,7 @@ func ModifyServicePrice(ctx *gin.Context) {
 		return
 	}
 	defer func() {
-		commonControllerLog(&code, &msg, data, data)
+		logger.CommonControllerLog(&code, &msg, data, data)
 		commonReturn(ctx, code, msg, data)
 	}()
 
