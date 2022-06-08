@@ -6,6 +6,7 @@ const (
 	//SUCCESS  = iota
 	SUCCESS = 200
 	ERROR   = 400
+	PANIC   = 0
 )
 
 // 注册、输入相关错误
@@ -65,6 +66,7 @@ const (
 	ErrorOrderIdNotMatchWithAdvisorID
 	ErrorOrderIdNotMatchWithUserID
 	ErrorOrderCantComment
+	ErrorCollectionExist
 )
 
 // Cron相关
@@ -77,6 +79,7 @@ const (
 var errMsg = map[int]string{
 	SUCCESS: "成功",
 	ERROR:   "错误",
+	PANIC:   "gin框架错误，请检查数据传参是否正确",
 	// user
 	ErrorUserPhoneUsed:   "手机号已注册！",
 	ErrorPasswordWrong:   "密码错误",
@@ -121,7 +124,7 @@ var errMsg = map[int]string{
 	ErrorOrderIdNotMatchWithAdvisorID:   "订单ID与顾问ID不匹配",
 	ErrorOrderIdNotMatchWithUserID:      "订单ID与用户ID不匹配",
 	ErrorOrderCantComment:               "该订单不可评论",
-
+	ErrorCollectionExist:                "已经收藏了该顾问",
 	//定时任务相关
 	ErrorCronAddJob:         "cron创建定时任务失败",
 	ErrorJobStatusNotExpect: "任务与预期状态不符合",
