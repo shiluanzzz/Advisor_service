@@ -2,7 +2,6 @@ package service
 
 import (
 	"database/sql"
-	"github.com/didi/gendry/scanner"
 	"github.com/fatih/structs"
 	_ "github.com/go-sql-driver/mysql"
 	"service-backend/model"
@@ -16,10 +15,8 @@ func GetService(serviceId int64) (code int, res model.Service) {
 	where := map[string]interface{}{
 		"id": serviceId,
 	}
-	code, rows := GetTableRows(SERVICETABLE, where, "*")
-	if err := scanner.Scan(rows, &res); err != nil {
-		return errmsg.ErrorSqlScanner, res
-	}
+	code = GetTableRows2StructByWhere(SERVICETABLE, where, []string{"*"}, &res)
+
 	return errmsg.SUCCESS, res
 }
 
@@ -46,12 +43,8 @@ func GetAdvisorServiceData(advisorId int64) (code int, res []*model.Service) {
 	where := map[string]interface{}{
 		"advisor_id": advisorId,
 	}
-	var rows *sql.Rows
-	if code, rows = GetTableRows(SERVICETABLE, where, "*"); code != errmsg.SUCCESS {
+	if code = GetTableRows2StructByWhere(SERVICETABLE, where, []string{"*"}, &res); code != errmsg.SUCCESS {
 		return
-	}
-	if err := scanner.Scan(rows, &res); err != nil {
-		return errmsg.ErrorSqlScanner, res
 	}
 	return errmsg.SUCCESS, res
 }

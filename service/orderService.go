@@ -3,7 +3,6 @@ package service
 import (
 	"database/sql"
 	"fmt"
-	"github.com/didi/gendry/scanner"
 	"go.uber.org/zap"
 	"service-backend/model"
 	"service-backend/utils"
@@ -236,10 +235,8 @@ func GetAdvisorOrderList(advisorId int64) (code int, res []*model.Order) {
 	}
 	selects := []string{"id", "user_id", "service_id", "service_name_id",
 		"status", "question", "situation", "advisor_id", "create_time"}
-	code, rows := GetTableRows(ORDERTABLE, where, selects...)
-	err := scanner.Scan(rows, &res)
-	if err != nil {
-		return errmsg.ErrorSqlScanner, nil
+	if code = GetTableRows2StructByWhere(ORDERTABLE, where, selects, &res); code != errmsg.SUCCESS {
+		return
 	}
 	// 附加信息:用户名、时间格式、服务类型
 	for _, v := range res {
@@ -252,21 +249,11 @@ func GetAdvisorOrderList(advisorId int64) (code int, res []*model.Order) {
 	return code, res
 }
 func GetOrder(orderId int64) (code int, res model.Order) {
-	var err error
-	defer logger.CommonServiceLog(&code, orderId, "err", err)
 	where := map[string]interface{}{
 		"id": orderId,
 	}
-	var rows *sql.Rows
-	if code, rows = GetTableRows(ORDERTABLE, where, "*"); code != errmsg.SUCCESS {
-		return code, res
-	}
-	if err = scanner.Scan(rows, &res); err != nil {
-		// TODO 更新到其他位置
-		if err == scanner.ErrNilRows || err == scanner.ErrEmptyResult {
-			return errmsg.ErrorNoResult, res
-		}
-		return errmsg.ErrorSqlScanner, res
+	if code = GetTableRows2StructByWhere(ORDERTABLE, where, []string{"*"}, &res); code != errmsg.SUCCESS {
+		return
 	}
 	return errmsg.SUCCESS, res
 }

@@ -154,6 +154,7 @@ func GetTableRows(tableName string, where map[string]interface{}, fieldName ...s
 		return errmsg.ErrorSqlBuild, nil
 	}
 	res, err = utils.DbConn.Query(cond, values...)
+	//TODO 在这里就判断查询结果是否为空而不是等到scanner去判断
 	if err != nil {
 		code = errmsg.ErrorMysql
 		return
@@ -413,4 +414,19 @@ func SQLExec(cond string, values []interface{}, tx ...*sql.Tx) (code int, Id int
 		return errmsg.ErrorMysql, -1
 	}
 	return errmsg.SUCCESS, Id
+}
+func GetTableRows2StructByWhere(tableName string, where map[string]interface{}, selects []string, object interface{}, tx ...*sql.Tx) (code int) {
+
+	var rows *sql.Rows
+	if code, rows = GetTableRows(tableName, where, selects...); code != errmsg.SUCCESS {
+		return
+	}
+	err := scanner.Scan(rows, object)
+	if err != nil {
+		if err == scanner.ErrNilRows || err == scanner.ErrEmptyResult {
+			return errmsg.ErrorNoResult
+		}
+		return errmsg.ErrorSqlScanner
+	}
+	return errmsg.SUCCESS
 }

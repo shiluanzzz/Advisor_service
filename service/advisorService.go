@@ -3,7 +3,6 @@ package service
 import (
 	"database/sql"
 	"fmt"
-	"github.com/didi/gendry/scanner"
 	"service-backend/model"
 	"service-backend/utils"
 	"service-backend/utils/errmsg"
@@ -14,16 +13,11 @@ import (
 
 var ADVISORTABLE = "advisor"
 
-func GetAdvisor(advisorId int64) (code int, res model.Advisor) {
-	var err error
-	defer logger.CommonServiceLog(&code, advisorId, "err", err)
-	where := map[string]interface{}{
+func GetAdvisor(advisorId int64) (code int, res *model.Advisor) {
+	code = GetTableRows2StructByWhere(ADVISORTABLE, map[string]interface{}{
 		"id": advisorId,
-	}
-	code, rows := GetTableRows(ADVISORTABLE, where, "*")
-	if err = scanner.Scan(rows, &res); err != nil {
-		return errmsg.ErrorSqlScanner, res
-	}
+	}, []string{"*"}, &res)
+
 	return errmsg.SUCCESS, res
 }
 func GetAdvisorList(page int) (int, []map[string]interface{}) {
@@ -69,12 +63,8 @@ func GetAdvisorCommentData(id int64) (code int, res []*model.OrderComment) {
 		"status":         model.Completed,
 		"comment_status": model.Commented,
 	}
-	var rows *sql.Rows
-	if code, rows = GetTableRows(ORDERTABLE, where, "*"); code != errmsg.SUCCESS {
+	if code = GetTableRows2StructByWhere(ORDERTABLE, where, []string{"*"}, &res); code != errmsg.SUCCESS {
 		return
-	}
-	if err := scanner.Scan(rows, &res); err != nil {
-		return errmsg.ErrorSqlScanner, nil
 	}
 	// 扩充数据
 	for _, v := range res {

@@ -3,7 +3,6 @@ package service
 import (
 	"database/sql"
 	qb "github.com/didi/gendry/builder"
-	"github.com/didi/gendry/scanner"
 	"github.com/fatih/structs"
 	"service-backend/model"
 	"service-backend/utils"
@@ -47,11 +46,7 @@ func NewUser(table string, user *model.Login, tx *sql.Tx) (int, int64) {
 
 // GetUser 对查询用户信息的方法再次封装，补充消息
 func GetUser(id int64) (code int, res model.User) {
-	code, rows := GetTableRows(USERTABLE, map[string]interface{}{"id": id}, "*")
-	err := scanner.Scan(rows, &res)
-	if err != nil {
-		return errmsg.ErrorSqlScanner, res
-	}
+	code = GetTableRows2StructByWhere(USERTABLE, map[string]interface{}{"id": id}, []string{"*"}, &res)
 	res.UpdateShow("02-01-2006")
 	return code, res
 }

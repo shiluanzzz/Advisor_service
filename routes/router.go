@@ -56,6 +56,7 @@ func InitRouter() {
 		orderUser.POST("/rush", v1.RushOrderController)
 		orderUser.POST("/comment", v1.CommentOrderController)
 	}
+
 	collection := r.Group("collection")
 	collection.Use(middleware.JwtToken()).Use(middleware.RoleValidate(service.USERTABLE))
 	{

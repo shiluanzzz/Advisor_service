@@ -128,7 +128,7 @@ func GetAdvisorInfoController(ctx *gin.Context) {
 	var data model.TableID
 	var serviceData []*model.Service
 	var comment []*model.OrderComment
-	var info model.Advisor
+	var info *model.Advisor
 	var code int
 	var msg string
 	if err := ctx.ShouldBindQuery(&data); err != nil {
