@@ -14,24 +14,33 @@ import (
 
 var ORDERTABLE = "user_order"
 
-func NewOrderAndCostTrans(model *model.Order) (code int, id int64) {
-	begin, err := utils.DbConn.Begin()
-	defer CommonTranDefer(&code, begin)
+func NewOrderAndCostTrans(data *model.Order) (code int, id int64) {
+	Tran, err := utils.DbConn.Begin()
+	defer CommonTranDefer(&code, Tran)
 	if err != nil {
 		return errmsg.ErrorSqlTransError, -1
 	}
 
 	// 扣掉金币
-	if code = CostUserCoin(model, begin); code != errmsg.SUCCESS {
+	if code = CostUserCoin(data, Tran); code != errmsg.SUCCESS {
 		return code, -1
 	}
 	// 新建订单
-	if code, id = NewOrder(model, begin); code != errmsg.SUCCESS {
+	if code, id = NewOrder(data, Tran); code != errmsg.SUCCESS {
 		return code, -1
 	}
-
+	// 添加流水
+	bill := model.Bill{
+		OrderId: id,
+		UserId:  data.UserId,
+		Amount:  data.Coin,
+		Type:    model.ORDERCOST,
+	}
+	if code = NewBill(&bill, Tran); code != errmsg.SUCCESS {
+		return
+	}
 	// 提交事务
-	if err := begin.Commit(); err != nil {
+	if err := Tran.Commit(); err != nil {
 		return errmsg.ErrorSqlTransCommitError, -1
 	}
 	return code, id
@@ -39,7 +48,7 @@ func NewOrderAndCostTrans(model *model.Order) (code int, id int64) {
 
 // NewOrder 新建订单
 func NewOrder(model *model.Order, tx *sql.Tx) (code int, id int64) {
-	// 转化数据并生成sql语句
+	// 转化数据并生成sql语句AAA
 	var userMap map[string]interface{}
 	var data []map[string]interface{}
 	// 转化为map
@@ -51,20 +60,10 @@ func NewOrder(model *model.Order, tx *sql.Tx) (code int, id int64) {
 }
 
 // CostUserCoin 扣掉用户的金币
-func CostUserCoin(model *model.Order, tx *sql.Tx) int {
-
+func CostUserCoin(model *model.Order, tx *sql.Tx) (code int) {
 	cond := "update `user` set coin = coin - ? where id = ?"
-	row, err := tx.Exec(cond, model.Coin, model.UserId)
-	if err != nil {
-		logger.SqlError(err, "cond", cond)
-		return errmsg.ErrorMysql
-	}
-	affects, _ := row.RowsAffected()
-	if affects != 1 {
-		logger.Log.Error("用户金币修改设计到多个行列", zap.Int64("userId", model.UserId))
-		return errmsg.ErrorAffectsNotOne
-	}
-	return errmsg.SUCCESS
+	code, _ = SQLExec(cond, []interface{}{model.Coin, model.UserId}, tx)
+	return
 }
 
 // ReplyOrderServiceTrans 事务提交 订单回复服务
@@ -92,7 +91,16 @@ func ReplyOrderServiceTrans(data *model.OrderReply) (code int) {
 	if code = AddCoin2Advisor(data, begin); code != errmsg.SUCCESS {
 		return
 	}
-
+	// 用户新增流水
+	bill := model.Bill{
+		OrderId:   data.Id,
+		AdvisorId: data.AdvisorId,
+		Amount:    reward,
+		Type:      model.ORDERINCOME,
+	}
+	if code = NewBill(&bill, begin); code != errmsg.SUCCESS {
+		return
+	}
 	// 事务终于结束了ho
 	err = begin.Commit()
 	if err != nil {
@@ -102,18 +110,9 @@ func ReplyOrderServiceTrans(data *model.OrderReply) (code int) {
 }
 
 // AddCoin2Advisor 在顾问回复订单后为顾问增加金币
-func AddCoin2Advisor(data *model.OrderReply, tx *sql.Tx) int {
+func AddCoin2Advisor(data *model.OrderReply, tx *sql.Tx) (code int) {
 	cond := fmt.Sprintf("update %s set coin=coin + ? where id= ?", ADVISORTABLE)
-	row, err := tx.Exec(cond, data.Coin, data.AdvisorId)
-	if err != nil {
-		logger.SqlError(err, "cond", cond)
-		return errmsg.ErrorMysql
-	}
-	affects, _ := row.RowsAffected()
-	if affects != 1 {
-		logger.Log.Error("用户金币修改设计到多个行列", zap.Int64("advisor_id", data.AdvisorId))
-		return errmsg.ErrorAffectsNotOne
-	}
+	code, _ = SQLExec(cond, []interface{}{data.Coin, data.AdvisorId}, tx)
 	return errmsg.SUCCESS
 }
 
@@ -137,6 +136,18 @@ func RushOrderTrans(data *model.OrderRush) (code int) {
 	code = UpdateTableItemById(USERTABLE, data.UserId, map[string]interface{}{
 		"coin": data.UserMoney - data.RushMoney,
 	}, begin)
+	//提交流水
+	bill := model.Bill{
+		UserId:  data.UserId,
+		OrderId: data.Id,
+		Amount:  data.RushMoney,
+		Type:    model.ORDERRUSHCOST,
+	}
+	// 加急订单支出
+	if code = NewBill(&bill, begin); code != errmsg.SUCCESS {
+		return
+	}
+
 	if code != errmsg.SUCCESS {
 		return code
 	}
@@ -190,16 +201,17 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus model.OrderStat
 	}
 	// 退回用户的金币增加逻辑
 	// 退回用户金币的逻辑
-	endCoin := userMoney.(int64)
+	originCoin := userMoney.(int64)
+	var backCoin int64
 	if originStatus == model.Rush && targetStatus == model.Pending {
 		// 加急到普通
-		endCoin += orderInSql.RushCoin
+		backCoin += orderInSql.RushCoin
 	} else if originStatus == model.Pending && targetStatus == model.Expired {
 		// 普通到过期
-		endCoin += orderInSql.Coin
+		backCoin += orderInSql.Coin
 		// 如果订单是在加急的状态下，也要把钱退回去。
 		if orderInSql.Status == model.Rush {
-			endCoin += orderInSql.RushCoin
+			backCoin += orderInSql.RushCoin
 		}
 	} else {
 		code = errmsg.ErrorJobStatusConvert
@@ -207,19 +219,36 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus model.OrderStat
 	}
 
 	// 提交用户的金币修改
-	code = UpdateTableItemById(USERTABLE, userId, map[string]interface{}{
-		"coin": endCoin,
-	}, Tran)
-	if code != errmsg.SUCCESS {
+	if code = UpdateTableItemById(USERTABLE, userId, map[string]interface{}{
+		"coin": originCoin + backCoin,
+	}, Tran); code != errmsg.SUCCESS {
 		return code
+	}
+	// 金币修改提交到流水表
+	bill := model.Bill{
+		UserId:  userId,
+		OrderId: orderId,
+		Amount:  backCoin,
+	}
+	switch originStatus {
+	case model.Rush:
+		bill.Type = model.ORDERRUSABACK
+	case model.Pending:
+		bill.Type = model.ORDERBACK
+	default:
+		return errmsg.ErrorJobStatusNotExpect
+	}
+	// 将用户的金币流水加入到账单中
+	if code = NewBill(&bill, Tran); code != errmsg.SUCCESS {
+		return
 	}
 	// 提交状态修改
-	code = UpdateTableItemById(ORDERTABLE, orderId, map[string]interface{}{
+	if code = UpdateTableItemById(ORDERTABLE, orderId, map[string]interface{}{
 		"status": targetStatus,
-	}, Tran)
-	if code != errmsg.SUCCESS {
+	}, Tran); code != errmsg.SUCCESS {
 		return code
 	}
+
 	// 提交事务
 	err = Tran.Commit()
 	if err != nil {

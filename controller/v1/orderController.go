@@ -86,6 +86,18 @@ func NewOrderController(ctx *gin.Context) {
 	if code = service.UpdateAdvisorIndicators(response.AdvisorId); code != errmsg.SUCCESS {
 		return
 	}
+
+	// 添加流水
+	bill := model.Bill{
+		OrderId: response.Id,
+		UserId:  response.UserId,
+		Amount:  response.Coin,
+		Type:    model.ORDERCOST,
+	}
+	if code = service.NewBill(&bill, nil); code != errmsg.SUCCESS {
+		return
+	}
+
 	// 订单状态24h后过期 新建一个监控事务
 	job := cronjob.CronJob{
 		OrderId:    response.Id,
@@ -149,7 +161,9 @@ func GetOrderDetailController(ctx *gin.Context) {
 	if code, user = service.GetUser(order.UserId); code != errmsg.SUCCESS {
 		return
 	}
-	// 修正生日的显示格式
+	// 业务修正
+	user.Coin = 0
+	user.CoinShow = 0.0
 	user.UpdateShow("Jan 02,2006")
 
 	return
