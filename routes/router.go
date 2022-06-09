@@ -5,8 +5,8 @@ import (
 	"log"
 	"service-backend/middleware"
 	"service-backend/service"
-	"service-backend/utils"
 	"service-backend/utils/logger"
+	"service-backend/utils/setting"
 )
 import v1 "service-backend/controller/v1"
 
@@ -69,7 +69,7 @@ func InitRouter() {
 		bill.GET("", v1.GetBillController)
 	}
 	logger.Log.Info("服务启动")
-	err := r.Run(utils.HttpPort)
+	err := r.Run(setting.Server.HttpPort)
 	if err != nil {
 		log.Fatalln("gin框架启动失败", err)
 	}

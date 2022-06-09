@@ -6,15 +6,15 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"service-backend/service"
-	"service-backend/utils"
 	"service-backend/utils/errmsg"
 	"service-backend/utils/logger"
+	"service-backend/utils/setting"
 	"strings"
 	"time"
 )
 
 var (
-	jwtKey = []byte(utils.JwtKey)
+	jwtKey = []byte(setting.Server.JwtKey)
 )
 
 // MyClaims 自定义一个cliams

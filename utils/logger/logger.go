@@ -3,8 +3,8 @@ package logger
 import (
 	"fmt"
 	"service-backend/model"
-	"service-backend/utils"
 	"service-backend/utils/errmsg"
+	"service-backend/utils/setting"
 	"service-backend/utils/tools"
 
 	"github.com/natefinch/lumberjack"
@@ -16,9 +16,9 @@ var Log *zap.Logger
 
 func init() {
 	// 三类日志的write
-	infoWrite := getLogWriter(utils.InfoLog)
-	errorWrite := getLogWriter(utils.ErrorLog)
-	warnWrite := getLogWriter(utils.WarnLog)
+	infoWrite := getLogWriter(setting.Logger.InfoLog)
+	errorWrite := getLogWriter(setting.Logger.ErrorLog)
+	warnWrite := getLogWriter(setting.Logger.WarnLog)
 
 	// 三类日志的level
 	infoLevel := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
@@ -44,7 +44,7 @@ func init() {
 func getLogEncoder() zapcore.Encoder {
 	// TODO 两种config有什么区别?
 	var encoderConfig zapcore.EncoderConfig
-	if utils.LoggerMode == "development" {
+	if setting.Logger.LoggerMode == "development" {
 		encoderConfig = zap.NewDevelopmentEncoderConfig()
 	} else {
 		encoderConfig = zap.NewProductionEncoderConfig()
@@ -54,7 +54,7 @@ func getLogEncoder() zapcore.Encoder {
 	// TODO ?
 	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 
-	switch utils.LoggerMode {
+	switch setting.Logger.LoggerMode {
 	case "development":
 		// 开发环境下直接打印查看
 		return zapcore.NewConsoleEncoder(encoderConfig)

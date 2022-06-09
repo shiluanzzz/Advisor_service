@@ -6,9 +6,9 @@ import (
 	"go.uber.org/zap"
 	"service-backend/model"
 	"service-backend/service"
-	"service-backend/utils"
 	"service-backend/utils/errmsg"
 	"service-backend/utils/logger"
+	"service-backend/utils/setting"
 	"time"
 )
 
@@ -35,7 +35,7 @@ func (order *CronJob) Run() {
 	// 隔1分钟扫描一次
 	switch order.CronType {
 	case RushOrderType:
-		runTime := time.Unix(order.RushTime+utils.RushOrder2PendingTime*60, 0)
+		runTime := time.Unix(order.RushTime+setting.ServiceCfg.RushOrder2PendingTime*60, 0)
 		if now.After(runTime) {
 			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Rush, model.Pending)
@@ -47,7 +47,7 @@ func (order *CronJob) Run() {
 			}
 		}
 	case PendingOrderType:
-		runTime := time.Unix(order.CreateTime+utils.PendingOrder2ExpireTime*60, 0)
+		runTime := time.Unix(order.CreateTime+setting.ServiceCfg.PendingOrder2ExpireTime*60, 0)
 		if now.After(runTime) {
 			// service层
 			code := service.ChangeOrderStatus(order.OrderId, order.UserId, model.Pending, model.Expired)

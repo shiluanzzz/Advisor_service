@@ -5,10 +5,10 @@ import (
 	"go.uber.org/zap"
 	"service-backend/model"
 	"service-backend/service"
-	"service-backend/utils"
 	"service-backend/utils/cronjob"
 	"service-backend/utils/errmsg"
 	"service-backend/utils/logger"
+	"service-backend/utils/setting"
 	"service-backend/utils/validator"
 	"time"
 )
@@ -76,7 +76,7 @@ func NewOrderController(ctx *gin.Context) {
 	response.CreateTime = time.Now().Unix()
 	response.ServiceNameId = serviceInSQL.ServiceNameId
 	// 加急订单的价格 只做记录，等到用户加急的时候安装这个去扣钱
-	response.RushCoin = int64(float32(response.Coin) * utils.RushOrderCost)
+	response.RushCoin = int64(float32(response.Coin) * setting.ServiceCfg.RushOrderCost)
 
 	// 提交到service层的事务
 	if code, response.Id = service.NewOrderAndCostTrans(&response); code != errmsg.SUCCESS {
