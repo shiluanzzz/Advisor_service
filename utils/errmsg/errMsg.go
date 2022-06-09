@@ -72,6 +72,7 @@ const (
 // Cron相关
 const (
 	ErrorCronAddJob = iota + 6001
+	ErrorCronJobId
 	ErrorJobStatusNotExpect
 	ErrorJobStatusConvert
 )
@@ -127,6 +128,7 @@ var errMsg = map[int]string{
 	ErrorCollectionExist:                "已经收藏了该顾问",
 	//定时任务相关
 	ErrorCronAddJob:         "cron创建定时任务失败",
+	ErrorCronJobId:          "cron定时任务的Id不符合预期",
 	ErrorJobStatusNotExpect: "任务与预期状态不符合",
 	ErrorJobStatusConvert:   "订单状态转化不符合预期",
 }

@@ -280,7 +280,6 @@ func UpdateTableItemById(tableName string, tableId int64, updates map[string]int
 }
 
 func InsertTableItem(tableName string, data []map[string]interface{}, tx ...*sql.Tx) (code int, Id int64) {
-	var res sql.Result
 	var err error
 	cond, values, err := qb.BuildInsert(tableName, data)
 	if err != nil {
@@ -291,19 +290,8 @@ func InsertTableItem(tableName string, data []map[string]interface{}, tx ...*sql
 			logger.Log.Error(fmt.Sprintf("无法向表 [%s] 根据 [%v|%v] 插入数据", tableName, cond, values), zap.Error(err))
 		}
 	}()
-	if len(tx) != 0 {
-		res, err = tx[0].Exec(cond, values...)
-	} else {
-		res, err = utils.DbConn.Exec(cond, values...)
-	}
-	if err != nil {
-		return errmsg.ErrorMysql, -1
-	}
-	Id, err = res.LastInsertId()
-	if err != nil {
-		return errmsg.ErrorMysql, -1
-	}
-	return errmsg.SUCCESS, Id
+	code, Id = SQLExec(cond, values)
+	return
 }
 
 // GetTableItemsById 通过Id字段查从数据表中查多个字段

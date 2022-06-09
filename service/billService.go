@@ -11,11 +11,11 @@ import (
 
 const BILLTABLE = "bill"
 
-func NewBill(data *model.Bill, tx *sql.Tx) (code int) {
+func NewBill(data *model.Bill, tx ...*sql.Tx) (code int) {
 	data.Time = time.Now().Unix()
 	defer logger.CommonServiceLog(&code, data, "msg", "新增了一笔流水")
 	maps := []map[string]interface{}{tools.Structs2SQLTable(data)}
-	code, _ = InsertTableItem(BILLTABLE, maps, tx)
+	code, _ = InsertTableItem(BILLTABLE, maps, tx...)
 	return
 }
 
@@ -32,11 +32,6 @@ func GetBill(id int64, role string) (code int, res []*model.Bill) {
 		return
 	}
 	code = GetTableRows2StructByWhere(BILLTABLE, where, []string{"*"}, &res)
-	// 完善一些展示信息
-	for _, v := range res {
-		v.BillType = v.Type.Name()
-		v.ShowTime = time.Unix(v.Time, 0).Format("Jan 02,2006 15:04:05")
-		v.ShowAmount = tools.ConvertCoinI2F(v.Amount)
-	}
+
 	return
 }

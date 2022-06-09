@@ -6,10 +6,10 @@ import (
 	"service-backend/model"
 	"service-backend/service"
 	"service-backend/utils/errmsg"
-	"service-backend/utils/logger"
 	"service-backend/utils/tools"
 	"service-backend/utils/validator"
 	"strconv"
+	"time"
 )
 
 func NewAdvisorController(ctx *gin.Context) {
@@ -22,10 +22,7 @@ func NewAdvisorController(ctx *gin.Context) {
 		ginBindError(ctx, err, data)
 		return
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, msg, data)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, data, data)
 	// 数据校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
@@ -59,10 +56,7 @@ func UpdateAdvisorController(ctx *gin.Context) {
 		ginBindError(ctx, err, data)
 		return
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, res)
-		commonReturn(ctx, code, msg, res)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, data, data)
 	// 将结构体中非nil的字段提取到map中
 	if res, code = tools.StructToMap(data, "structs"); code != errmsg.SUCCESS {
 		return
@@ -113,13 +107,19 @@ func GetAdvisorList(ctx *gin.Context) {
 	pageString := ctx.Param("page")
 	page, err := strconv.Atoi(pageString)
 	var code int
+	var data []*model.Advisor
+	defer commonControllerDefer(ctx, &code, nil, map[string]interface{}{"page": page}, &data)
 	if err != nil || page < 1 {
 		code = errmsg.ErrorInput
 		commonReturn(ctx, code, "", map[string]int{"page": page})
 		return
 	}
-	code, data := service.GetAdvisorList(page)
-	commonReturn(ctx, code, "", data)
+	code, data = service.GetAdvisorList(page)
+	// 删除敏感信息
+	for _, v := range data {
+		v.Coin = 0
+	}
+	//commonReturn(ctx, code, "", data)
 }
 
 // GetAdvisorInfoController 获取顾问的详细信息
@@ -134,30 +134,40 @@ func GetAdvisorInfoController(ctx *gin.Context) {
 	if err := ctx.ShouldBindQuery(&data); err != nil {
 		ginBindError(ctx, err, data)
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, msg,
-			map[string]interface{}{
-				"info":     info,
-				"services": serviceData,
-				"comments": comment,
-			},
-		)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, data, map[string]interface{}{
+		"info":     &info,
+		"service":  &serviceData,
+		"comments": &comment,
+	})
+
 	// 字段基础校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
 	}
+	// 顾问的信息
 	if code, info = service.GetAdvisor(data.Id); code != errmsg.SUCCESS {
 		return
 	}
+	// 相关订单的评论
 	if code, comment = service.GetAdvisorCommentData(data.Id); code != errmsg.SUCCESS {
 		return
 	}
+	// 开放的服务
 	if code, serviceData = service.GetAdvisorServiceData(data.Id); code != errmsg.SUCCESS {
 		return
 	}
 
+	// 完善相关展示字段
+	// 扩充数据
+	for _, v := range comment {
+		var userNameUint8 interface{}
+		if code, userNameUint8 = service.GetTableItem(service.USERTABLE, v.UserId, "name"); code != errmsg.SUCCESS {
+			return
+		}
+		v.UserName = fmt.Sprintf("%s", userNameUint8)
+		v.CreateShowTime = time.Unix(v.OrderCreateTime, 0).Format("Jan 02,2006 15:04:05")
+		v.CommentShowTime = time.Unix(v.CommentTime, 0).Format("Jan 02,2006 15:04:05")
+	}
 	return
 }
 
@@ -173,10 +183,7 @@ func ModifyAdvisorStatus(ctx *gin.Context) {
 	}
 	data.AdvisorId = ctx.GetInt64("id")
 	// return func
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, msg, data)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, data, data)
 	// 输入校验后执行业务逻辑
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return

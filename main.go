@@ -13,12 +13,11 @@ func main() {
 	cronjob.InitCronJob()
 	routes.InitRouter()
 
-	//code := service.UpdateAdvisorIndicators(30001)
-	//fmt.Println(errmsg.GetErrMsg(code))
 	defer func() {
 		err := utils.DbConn.Close()
 		if err != nil {
 			logger.Log.Error("关闭数据库连接错误", zap.Error(err))
 		}
 	}()
+	select {}
 }

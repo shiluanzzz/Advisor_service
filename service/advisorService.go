@@ -2,13 +2,11 @@ package service
 
 import (
 	"database/sql"
-	"fmt"
 	"service-backend/model"
 	"service-backend/utils"
 	"service-backend/utils/errmsg"
 	"service-backend/utils/logger"
 	"service-backend/utils/tools"
-	"time"
 )
 
 var ADVISORTABLE = "advisor"
@@ -20,7 +18,7 @@ func GetAdvisor(advisorId int64) (code int, res *model.Advisor) {
 
 	return errmsg.SUCCESS, res
 }
-func GetAdvisorList(page int) (int, []map[string]interface{}) {
+func GetAdvisorList(page int) (code int, res []*model.Advisor) {
 	uPage := uint(page)
 	where := map[string]interface{}{
 		"status": 1,
@@ -29,7 +27,9 @@ func GetAdvisorList(page int) (int, []map[string]interface{}) {
 	selects := []string{
 		"id", "phone", "name", "bio",
 	}
-	return GetManyTableItemsByWhere(ADVISORTABLE, where, selects)
+	code = GetTableRows2StructByWhere(ADVISORTABLE, where, selects, &res)
+	return
+	//return GetManyTableItemsByWhere(ADVISORTABLE, where, selects)
 }
 
 func NewAdvisorAndService(data *model.Login) (code int, id int64) {
@@ -66,20 +66,11 @@ func GetAdvisorCommentData(id int64) (code int, res []*model.OrderComment) {
 	if code = GetTableRows2StructByWhere(ORDERTABLE, where, []string{"*"}, &res); code != errmsg.SUCCESS {
 		return
 	}
-	// 扩充数据
-	for _, v := range res {
-		var userNameUint8 interface{}
-		if code, userNameUint8 = GetTableItem(USERTABLE, v.UserId, "name"); code != errmsg.SUCCESS {
-			return
-		}
-		v.UserName = fmt.Sprintf("%s", userNameUint8)
-		v.CreateShowTime = time.Unix(v.OrderCreateTime, 0).Format("Jan 02,2006 15:04:05")
-		v.CommentShowTime = time.Unix(v.CommentTime, 0).Format("Jan 02,2006 15:04:05")
-	}
+
 	return
 }
 
-// UpdateAdvisorIndicators week3 更新用户的一些指标信息
+// UpdateAdvisorIndicators week3 更新用户的一些指标信息 TODO 优化
 func UpdateAdvisorIndicators(advisorId int64, tx ...*sql.Tx) (code int) {
 
 	var indicators model.AdvisorIndicators

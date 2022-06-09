@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
@@ -23,8 +24,23 @@ func commonReturn(ctx *gin.Context, code int, msg string, data interface{}) {
 	return
 }
 
+// defer
+func commonControllerDefer(ctx *gin.Context, code *int, msg *string, request interface{}, data interface{}) {
+	if msg == nil {
+		ss := ""
+		msg = &ss
+	}
+	logger.CommonControllerLog(code, msg, request, data)
+	commonReturn(ctx, *code, *msg, data)
+}
+
 // ginBindError gin绑定数据的error 返回
 func ginBindError(ctx *gin.Context, err error, data interface{}) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Log.Error("gin框架Panic", zap.String("err", fmt.Sprintf("%v", err)), zap.String("function", tools.WhoCallMe()))
+		}
+	}()
 	code := errmsg.ErrorGinBind
 	logger.Log.Error("gin绑定json错误", zap.Error(err), zap.String("function", tools.WhoCallMe()))
 	commonReturn(ctx, code, "", data)
@@ -40,19 +56,14 @@ func Login(table string, ctx *gin.Context) {
 		ginBindError(ctx, err, &data)
 		return
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, msg, data)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, data, data)
 	// 数据校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
 	}
 	// 获取用户的ID
-	//data.Id, code = service.GetId(table, data.Phone)
-	code, id := service.GetTableItemByWhere(
-		table, map[string]interface{}{"phone": data.Phone}, "id")
-	if code != errmsg.SUCCESS {
+	var id interface{}
+	if code, id = service.GetTableItemByWhere(table, map[string]interface{}{"phone": data.Phone}, "id"); code != errmsg.SUCCESS {
 		return
 	}
 	data.Id = id.(int64)
@@ -75,22 +86,18 @@ func UpdatePwdController(table string, ctx *gin.Context) {
 		ginBindError(ctx, err, data)
 		return
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, msg, data)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, data, data)
 	// 数据校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
 	}
-	id := ctx.GetInt64("id")
-	data.Id = id
+	data.Id = ctx.GetInt64("id")
 	// 检查旧密码是否正确
-	if code = service.CheckRolePwd(table, id, data.OldPassword); code != errmsg.SUCCESS {
+	if code = service.CheckRolePwd(table, data.Id, data.OldPassword); code != errmsg.SUCCESS {
 		return
 	}
 	// 更新密码
-	if code = service.ChangePWD(table, id, data.NewPassword); code != errmsg.SUCCESS {
+	if code = service.ChangePWD(table, data.Id, data.NewPassword); code != errmsg.SUCCESS {
 		return
 	}
 	return

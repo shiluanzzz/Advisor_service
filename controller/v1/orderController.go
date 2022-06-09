@@ -87,17 +87,6 @@ func NewOrderController(ctx *gin.Context) {
 		return
 	}
 
-	// 添加流水
-	bill := model.Bill{
-		OrderId: response.Id,
-		UserId:  response.UserId,
-		Amount:  response.Coin,
-		Type:    model.ORDERCOST,
-	}
-	if code = service.NewBill(&bill, nil); code != errmsg.SUCCESS {
-		return
-	}
-
 	// 订单状态24h后过期 新建一个监控事务
 	job := cronjob.CronJob{
 		OrderId:    response.Id,

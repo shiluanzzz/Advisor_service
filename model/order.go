@@ -51,8 +51,8 @@ type OrderRush struct {
 	Id        int64 `structs:"id" json:"orderId"`
 	UserId    int64 `structs:"user_id" json:"userId"`
 	RushTime  int64 `json:"rushTime"`
-	UserMoney int64
-	RushMoney int64
+	UserMoney int64 `json:"userMoney"`
+	RushMoney int64 `json:"rushMoney"`
 	Status    int64 `json:"status"`
 }
 type OrderComment struct {
