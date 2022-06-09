@@ -17,43 +17,24 @@ import (
 var TABLES = []string{ADVISORTABLE, USERTABLE}
 
 // CheckPhoneExist 检查手机号是否重复 true=已经存在 false=不存在
-func CheckPhoneExist(tableName string, phone interface{}) int {
+func CheckPhoneExist(table string, phone interface{}) (code int) {
 	// 生产sql语句
-	where := map[string]interface{}{
-		"phone": phone,
+	code, _ = GetTableItemByWhere(
+		table,
+		map[string]interface{}{"phone": phone},
+		"phone",
+	)
+	if code != errmsg.ErrorMysqlNoRows {
+		code = errmsg.ErrorUserPhoneUsed
+		return
 	}
-	selectFields := []string{"phone"}
-	cond, values, err := qb.BuildSelect(tableName, where, selectFields)
-	if err != nil {
-		logger.GendryBuildError(err)
-		return errmsg.ErrorSqlBuild
-	}
-	// 查询
-	rows, err := utils.DbConn.Query(cond, values...)
-	if err != nil {
-		logger.SqlError(err)
-		return errmsg.ErrorMysql
-	}
-	// 判断是否存在重复key
-	res, err := scanner.ScanMapDecodeClose(rows)
-	if err != nil {
-		if err == scanner.ErrNilRows {
-			return errmsg.SUCCESS
-		}
-		logger.GendryScannerError(err)
-		return errmsg.ErrorSqlScanner
-	}
-	if len(res) != 0 {
-		return errmsg.ErrorUserPhoneUsed
-	} else {
-		return errmsg.SUCCESS
-	}
+	return errmsg.SUCCESS
 }
 
 // ChangePWD 更改用户密码
 func ChangePWD(tableName string, id int64, newPwd string) int {
 	// 密码加密
-	newPwd = GetPwd(newPwd)
+	newPwd = GetEncryptPwd(newPwd)
 	// 构造sql
 	where := map[string]interface{}{
 		"id": id,
@@ -75,8 +56,8 @@ func ChangePWD(tableName string, id int64, newPwd string) int {
 	return errmsg.SUCCESS
 }
 
-// GetPwd 获取加密的密码
-func GetPwd(pwd string) string {
+// GetEncryptPwd 获取加密的密码
+func GetEncryptPwd(pwd string) string {
 	hashPwd, err := bcrypt.GenerateFromPassword([]byte(pwd), 10)
 	if err != nil {
 		logger.Log.Error("生成密码错误", zap.Error(err))
@@ -290,7 +271,7 @@ func InsertTableItem(tableName string, data []map[string]interface{}, tx ...*sql
 			logger.Log.Error(fmt.Sprintf("无法向表 [%s] 根据 [%v|%v] 插入数据", tableName, cond, values), zap.Error(err))
 		}
 	}()
-	code, Id = SQLExec(cond, values)
+	code, Id = SQLExec(cond, values, tx...)
 	return
 }
 
@@ -338,41 +319,6 @@ func GetTableItemsById(tableName string, tableId int64, selects []string, tx ...
 
 }
 
-// GetTableItemsByWhere 通过条件判断从数据表中查多个字段
-func GetTableItemsByWhere(tableName string, where map[string]interface{}, selects []string, res interface{}, tx ...*sql.Tx) (code int, res2 interface{}) {
-	var err error
-	defer func() {
-		if code != errmsg.SUCCESS {
-			logger.Log.Error("通用查询出错", zap.Error(err), zap.String("errorMsg", errmsg.GetErrMsg(code)))
-		}
-	}()
-	cond, values, err := qb.BuildSelect(tableName, where, selects)
-	if err != nil {
-		logger.GendryBuildError(err)
-		return errmsg.ErrorSqlBuild, nil
-	}
-	var rows *sql.Rows
-	if len(tx) != 0 {
-		rows, err = tx[0].Query(cond, values...)
-	} else {
-		rows, err = utils.DbConn.Query(cond, values...)
-	}
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errmsg.ErrorNoResult, nil
-		} else {
-			return errmsg.ErrorMysql, nil
-		}
-	}
-	//results, err := scanner.ScanMapDecodeClose(rows)
-	err = scanner.Scan(rows, &res)
-	if err != nil {
-		logger.GendryScannerError(err, "cond", cond, "values", values)
-		return errmsg.ErrorSqlScanner, nil
-	}
-	return errmsg.SUCCESS, res
-}
-
 // CommonTranDefer 用在包含事务的service函数中，自动回滚事务
 func CommonTranDefer(code *int, Tran *sql.Tx) {
 	if *code != errmsg.SUCCESS {
@@ -403,7 +349,7 @@ func SQLExec(cond string, values []interface{}, tx ...*sql.Tx) (code int, Id int
 	}
 	return errmsg.SUCCESS, Id
 }
-func GetTableRows2StructByWhere(tableName string, where map[string]interface{}, selects []string, object interface{}, tx ...*sql.Tx) (code int) {
+func GetTableRows2StructByWhere(tableName string, where map[string]interface{}, selects []string, object interface{}) (code int) {
 
 	var rows *sql.Rows
 	if code, rows = GetTableRows(tableName, where, selects...); code != errmsg.SUCCESS {

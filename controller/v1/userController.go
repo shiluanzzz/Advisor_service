@@ -6,7 +6,6 @@ import (
 	"service-backend/model"
 	"service-backend/service"
 	"service-backend/utils/errmsg"
-	"service-backend/utils/logger"
 	"service-backend/utils/tools"
 	"service-backend/utils/validator"
 )
@@ -20,10 +19,8 @@ func UpdateUserInfoController(ctx *gin.Context) {
 		ginBindError(ctx, err, &data)
 		return
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, msg, data)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, &data, &data)
+
 	// 将结构体中非nil的字段提取到map中
 	if res, code = tools.StructToMap(data, "structs"); code != errmsg.SUCCESS {
 		return
@@ -72,29 +69,24 @@ func NewUserController(ctx *gin.Context) {
 		ginBindError(ctx, err, data)
 		return
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, msg, data)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, data, &data)
+
 	// 数据校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return
 	}
 	// 调用service层 检查手机号是否重复
-	//code = service.CheckPhoneExist(service.USERTABLE, data.Phone)
-	code, _ = service.GetTableItemByWhere(service.USERTABLE, map[string]interface{}{
-		"phone": data.Phone,
-	}, "phone")
-	if code != errmsg.ErrorMysqlNoRows {
-		code = errmsg.ErrorUserPhoneUsed
+	if code = service.CheckPhoneExist(service.USERTABLE, data.Phone); code != errmsg.SUCCESS {
 		return
 	}
 	// 用户密码加密存储
-	data.Password = service.GetPwd(data.Password)
+	data.Password = service.GetEncryptPwd(data.Password)
+	// 入库
 	insertMap := tools.Structs2SQLTable(data)
-	code, data.Id = service.InsertTableItem(service.USERTABLE, []map[string]interface{}{insertMap})
-	//code, data.Id = service.NewUserController(service.USERTABLE, &data, nil)
-	//logger.Log.Info("新增用户", zap.String("phone", data.Phone))
+	code, data.Id = service.InsertTableItem(
+		service.USERTABLE,
+		[]map[string]interface{}{insertMap},
+	)
 	return
 }
 
@@ -105,12 +97,16 @@ func UpdateUserPwd(ctx *gin.Context) {
 
 // UserLoginController 用户登录
 func UserLoginController(ctx *gin.Context) {
-	Login(service.USERTABLE, ctx)
+	LoginController(service.USERTABLE, ctx)
 }
 
 func GetUserInfoController(ctx *gin.Context) {
 	id := ctx.GetInt64("id")
-	code, data := service.GetUser(id)
-	commonReturn(ctx, code, "", data)
+	var response *model.User
+	var code int
+
+	defer commonControllerDefer(ctx, &code, nil, &id, &response)
+
+	code, response = service.GetUser(id)
 	return
 }

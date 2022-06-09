@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"fmt"
 	qb "github.com/didi/gendry/builder"
 	"github.com/fatih/structs"
 	"service-backend/model"
@@ -45,8 +46,21 @@ func NewUser(table string, user *model.Login, tx *sql.Tx) (int, int64) {
 }
 
 // GetUser 对查询用户信息的方法再次封装，补充消息
-func GetUser(id int64) (code int, res model.User) {
-	code = GetTableRows2StructByWhere(USERTABLE, map[string]interface{}{"id": id}, []string{"*"}, &res)
+func GetUser(id int64) (code int, res *model.User) {
+	code = GetTableRows2StructByWhere(
+		USERTABLE,
+		map[string]interface{}{"id": id},
+		[]string{"*"},
+		&res,
+	)
 	res.UpdateShow("02-01-2006")
 	return code, res
+}
+func GetUserName(UserId int64) (code int, res string) {
+	var userNameUint8 interface{}
+	if code, userNameUint8 = GetTableItem(USERTABLE, UserId, "name"); code != errmsg.SUCCESS {
+		return
+	}
+	res = fmt.Sprintf("%s", userNameUint8)
+	return errmsg.SUCCESS, res
 }

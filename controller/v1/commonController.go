@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
+	"reflect"
 	"service-backend/middleware"
 	"service-backend/model"
 	"service-backend/service"
@@ -30,6 +31,9 @@ func commonControllerDefer(ctx *gin.Context, code *int, msg *string, request int
 		ss := ""
 		msg = &ss
 	}
+	if reflect.TypeOf(data).Kind() != reflect.Ptr {
+		logger.Log.Warn("接口应当传递指针", zap.String("function", tools.WhoCallMe()))
+	}
 	logger.CommonControllerLog(code, msg, request, data)
 	commonReturn(ctx, *code, *msg, data)
 }
@@ -47,8 +51,8 @@ func ginBindError(ctx *gin.Context, err error, data interface{}) {
 	return
 }
 
-// Login 用户或者顾问登录
-func Login(table string, ctx *gin.Context) {
+// LoginController 用户或者顾问登录
+func LoginController(table string, ctx *gin.Context) {
 	var data model.Login
 	var code int
 	var msg string
@@ -56,7 +60,7 @@ func Login(table string, ctx *gin.Context) {
 		ginBindError(ctx, err, &data)
 		return
 	}
-	defer commonControllerDefer(ctx, &code, &msg, data, data)
+	defer commonControllerDefer(ctx, &code, &msg, &data, &data)
 	// 数据校验
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
 		return

@@ -131,7 +131,7 @@ func GetCommentKey(id int64) string {
 	return fmt.Sprintf("advisor's_ordercomment_%d", id)
 }
 
-// 封装 一层业务相关的接口
+// 封装好缓存的接口三个接口
 
 func GetCacheData(key string, response interface{}) (code int) {
 	if exists(key) {

@@ -1,6 +1,7 @@
 package model
 
-type AdvisorInfo struct {
+// AdvisorUpdateInfo 用来动态更新advisor的信息
+type AdvisorUpdateInfo struct {
 	Name           *string `structs:"name" json:"name" `
 	Phone          *string `structs:"phone" json:"phone"`
 	WorkExperience *int    `structs:"work_experience" json:"workExperience"`
@@ -30,4 +31,10 @@ type AdvisorIndicators struct {
 	TotalCommentNum int     `json:"totalCommentNum,omitempty" structs:"total_comment_num"`
 	Rank            float32 `json:"rank,omitempty" structs:"rank"`
 	OnTime          float32 `json:"onTime,omitempty" structs:"on_time"`
+}
+
+type AdvisorDetailInfo struct {
+	ServiceData []*Service      `json:"service"`
+	Comments    []*OrderComment `json:"comments"`
+	Info        *Advisor        `json:"info"`
 }

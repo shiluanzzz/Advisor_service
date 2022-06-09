@@ -17,7 +17,7 @@ var (
 	jwtKey = []byte(setting.Server.JwtKey)
 )
 
-// MyClaims 自定义一个cliams
+// MyClaims 自定义一个claims
 type MyClaims struct {
 	Id   int64
 	Role string

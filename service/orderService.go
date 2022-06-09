@@ -270,8 +270,7 @@ func GetAdvisorOrderList(advisorId int64) (code int, res []*model.Order) {
 	// 附加信息:用户名、时间格式、服务类型
 	for _, v := range res {
 		v.ShowTime = time.Unix(v.CreateTime, 0).Format("Jan 02,2006")
-		_, UserName := GetTableItem(USERTABLE, v.UserId, "name")
-		v.UserName = fmt.Sprintf("%s", UserName)
+		_, v.UserName = GetUserName(v.UserId)
 		v.ServiceName = model.ServiceKind[v.ServiceNameId]
 		v.ServiceStatusName = v.Status.StatusName()
 	}
