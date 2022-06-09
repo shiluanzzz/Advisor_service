@@ -12,7 +12,7 @@ type Advisor struct {
 	Id             int64             `json:"id" structs:"id"`
 	Phone          string            `json:"phone" structs:"phone"`
 	Name           string            `json:"name" structs:"name"`
-	Coin           int               `json:"coin" structs:"coin"`
+	Coin           int               `json:"coin,omitempty" structs:"coin"`
 	Status         ServiceStatusCode `json:"status" structs:"status"`
 	WorkExperience int               `json:"workExperience" structs:"work_experience"`
 	Bio            string            `json:"bio" structs:"bio"`
