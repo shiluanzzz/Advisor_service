@@ -71,3 +71,8 @@ type CommentStruct struct {
 	Comment string `structs:"comment" json:"comment" validate:"max=300"`
 	Rate    int    `structs:"rate" json:"rate" validate:"required,min=0,max=5"`
 }
+
+type OrderDetail struct {
+	Order `json:"order"`
+	User  `json:"user"`
+}

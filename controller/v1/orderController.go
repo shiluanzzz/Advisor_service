@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 	"service-backend/model"
 	"service-backend/service"
+	"service-backend/utils/cache"
 	"service-backend/utils/cronjob"
 	"service-backend/utils/errmsg"
 	"service-backend/utils/logger"
@@ -118,43 +119,45 @@ func GetOrderListController(ctx *gin.Context) {
 // GetOrderDetailController 获取订单详情
 func GetOrderDetailController(ctx *gin.Context) {
 	var request model.TableID
-	var order model.Order
-	var user model.User
-	response := map[string]interface{}{
-		"orderInfo": &order,
-		"userInfo":  &user,
-	}
+	var response model.OrderDetail
 	var code int
 	var msg string
+	var cacheKey = cache.GetOrderKey(request.Id)
 	if err := ctx.ShouldBindQuery(&request); err != nil {
 		ginBindError(ctx, err, request)
 	}
 	// return
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, request, response)
-		commonReturn(ctx, code, "", response)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, &request, &response)
+
+	// 缓存查询
+
+	if code = cache.GetCacheData(cacheKey, &response); code == errmsg.SUCCESS {
+		return
+	}
+
 	if msg, code = validator.Validate(request); code != errmsg.SUCCESS {
 		return
 	}
 	// 逻辑校验 直接拿数据然后
-	if code, order = service.GetOrder(request.Id); code != errmsg.SUCCESS {
+	if code, response.Order = service.GetOrder(request.Id); code != errmsg.SUCCESS {
 		return
 	}
 	// 订单是不是你的
-	if order.AdvisorId != ctx.GetInt64("id") {
+	if response.Order.AdvisorId != ctx.GetInt64("id") {
 		code = errmsg.ErrorOrderIdNotMatchWithAdvisorID
 		return
 	}
 	//在基础的信息上扩充用户的相关信息
-	if code, user = service.GetUser(order.UserId); code != errmsg.SUCCESS {
+	if code, response.User = service.GetUser(response.Order.UserId); code != errmsg.SUCCESS {
 		return
 	}
 	// 业务修正
-	user.Coin = 0
-	user.CoinShow = 0.0
-	user.UpdateShow("Jan 02,2006")
+	response.User.Coin = 0
+	response.User.CoinShow = 0.0
+	response.User.UpdateShow("Jan 02,2006")
 
+	// 写入缓存
+	cache.SetCacheData(cacheKey, response)
 	return
 }
 
@@ -352,5 +355,8 @@ func CommentOrderController(ctx *gin.Context) {
 	if code = service.UpdateAdvisorIndicators(orderInSql.AdvisorId); code != errmsg.SUCCESS {
 		return
 	}
+
+	// 更新缓存
+	cache.DeleteCacheData(cache.GetCommentKey(orderInSql.AdvisorId))
 	return
 }

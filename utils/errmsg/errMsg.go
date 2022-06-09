@@ -77,6 +77,17 @@ const (
 	ErrorJobStatusConvert
 )
 
+// 缓存相关
+const (
+	ErrorCacheMarshal = iota + 7001
+	ErrorCacheDoSet
+	ErrorCacheDoExpire
+	ErrorCacheGetBytes
+	ErrorCacheDeleteKey
+	ErrorCacheUnmarshal
+	ErrorCacheKeyNotExist
+)
+
 var errMsg = map[int]string{
 	SUCCESS: "成功",
 	ERROR:   "错误",
@@ -131,6 +142,14 @@ var errMsg = map[int]string{
 	ErrorCronJobId:          "cron定时任务的Id不符合预期",
 	ErrorJobStatusNotExpect: "任务与预期状态不符合",
 	ErrorJobStatusConvert:   "订单状态转化不符合预期",
+	//缓存相关提示信息
+	ErrorCacheMarshal:     "缓存数据编码错误",
+	ErrorCacheDoSet:       "redis do操作错误",
+	ErrorCacheDoExpire:    "redis expire操作错误",
+	ErrorCacheGetBytes:    "redis get操作错误",
+	ErrorCacheDeleteKey:   "redis 删除缓存数据错误",
+	ErrorCacheUnmarshal:   "缓存数据解码错误",
+	ErrorCacheKeyNotExist: "缓存key不存在",
 }
 
 func GetErrMsg(code int) string {

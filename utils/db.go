@@ -4,15 +4,13 @@ import (
 	"database/sql"
 	"github.com/didi/gendry/manager"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gomodule/redigo/redis"
 	"log"
 	"service-backend/utils/setting"
 	"time"
 )
 
 var (
-	DbConn    *sql.DB
-	RedisConn *redis.Pool
+	DbConn *sql.DB
 )
 
 func InitDB() {
@@ -30,7 +28,4 @@ func InitDB() {
 		log.Fatalln("database build error!", err)
 	}
 	//defer DbConn.Close()
-}
-func InitRedis() {
-
 }

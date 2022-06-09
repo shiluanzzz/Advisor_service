@@ -4,15 +4,16 @@ import (
 	"go.uber.org/zap"
 	"service-backend/routes"
 	"service-backend/utils"
+	"service-backend/utils/cache"
 	"service-backend/utils/cronjob"
 	"service-backend/utils/logger"
 )
 
 func main() {
 	utils.InitDB()
+	cache.InitRedis()
 	cronjob.InitCronJob()
 	routes.InitRouter()
-
 	defer func() {
 		err := utils.DbConn.Close()
 		if err != nil {

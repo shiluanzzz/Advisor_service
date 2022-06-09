@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"service-backend/model"
 	"service-backend/utils"
+	"service-backend/utils/cache"
 	"service-backend/utils/errmsg"
 	"service-backend/utils/logger"
 	"service-backend/utils/tools"
@@ -56,10 +57,16 @@ func NewAdvisorAndService(data *model.Login) (code int, id int64) {
 }
 
 // GetAdvisorCommentData 获取顾问的订单评论数据
-func GetAdvisorCommentData(id int64) (code int, res []*model.OrderComment) {
-	defer logger.CommonServiceLog(&code, id)
+func GetAdvisorCommentData(advisorId int64) (code int, res []*model.OrderComment) {
+	var cacheKey = cache.GetCommentKey(advisorId)
+	if code = cache.GetCacheData(cacheKey, &res); code == errmsg.SUCCESS {
+		return
+	}
+	defer cache.SetCacheData(cacheKey, &res)
+	defer logger.CommonServiceLog(&code, advisorId)
+
 	where := map[string]interface{}{
-		"advisor_id":     id,
+		"advisor_id":     advisorId,
 		"status":         model.Completed,
 		"comment_status": model.Commented,
 	}
