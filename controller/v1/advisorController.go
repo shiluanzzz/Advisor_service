@@ -72,7 +72,7 @@ func UpdateAdvisorController(ctx *gin.Context) {
 	res["id"] = ctx.GetInt64("id")
 	// 检查手机号是否重复
 	if res["phone"] != nil {
-		code, value := service.GetTableItem(service.ADVISORTABLE, res["id"].(int64), "phone")
+		code, value := service.GetTableItemById(service.ADVISORTABLE, res["id"].(int64), "phone")
 		// 电话号码有变动
 		if fmt.Sprintf("%s", value) != *(res["phone"].(*string)) {
 			code = service.CheckPhoneExist(service.ADVISORTABLE, res["phone"])

@@ -9,12 +9,17 @@ import (
 const COLLECTIONTABLE = "collection"
 
 func NewCollection(data *model.Collection) (code int, res *model.Collection) {
-	maps := tools.Structs2SQLTable(data)
-	code, data.Id = InsertTableItem(COLLECTIONTABLE, []map[string]interface{}{maps})
+	maps := []map[string]interface{}{tools.Structs2SQLTable(data)}
+	code, data.Id = InsertTableItem(COLLECTIONTABLE, maps)
 	return code, data
 }
 
 func GetUserCollection(id int64) (code int, res []*model.Collection) {
-	code = GetTableRows2StructByWhere(COLLECTIONTABLE, map[string]interface{}{"user_id": id}, []string{"*"}, &res)
+	code = GetTableRows2StructByWhere(
+		COLLECTIONTABLE,
+		map[string]interface{}{"user_id": id},
+		[]string{"*"},
+		&res,
+	)
 	return errmsg.SUCCESS, res
 }

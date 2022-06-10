@@ -3,46 +3,19 @@ package service
 import (
 	"database/sql"
 	"fmt"
-	qb "github.com/didi/gendry/builder"
-	"github.com/fatih/structs"
 	"service-backend/model"
-	"service-backend/utils"
 	"service-backend/utils/errmsg"
-	"service-backend/utils/logger"
+	"service-backend/utils/tools"
 )
 
 var USERTABLE = "user"
 
-// NewUser 新增用户或者顾问
-func NewUser(table string, user *model.Login, tx *sql.Tx) (int, int64) {
-	// 转化数据并生成sql语句
-	var data []map[string]interface{}
-	// 去出token字段
-	userMap := structs.Map(user)
-	delete(userMap, "token")
-	data = append(data, userMap)
-	cond, values, err := qb.BuildInsert(table, data)
-	if err != nil {
-		logger.GendryBuildError(err, "cond", cond, "values", values)
-		return errmsg.ErrorSqlBuild, -1
-	}
-	var row sql.Result
-	// 执行sql语句
-	if tx != nil {
-		row, err = tx.Exec(cond, values...)
-	} else {
-		row, err = utils.DbConn.Exec(cond, values...)
-	}
-	if err != nil {
-		logger.SqlError(err, "cond", cond, "values", values)
-		return errmsg.ErrorMysql, -1
-	}
-	// 获取用户的主键ID
-	user.Id, err = row.LastInsertId()
-	if err != nil {
-		logger.SqlError(err, "cond", cond, "values", values)
-	}
-	return errmsg.SUCCESS, user.Id
+// NewRole 新增用户或者顾问
+func NewRole(table string, user *model.Login, tx *sql.Tx) (code int, id int64) {
+
+	maps := []map[string]interface{}{tools.Structs2SQLTable(user)}
+	code, id = InsertTableItem(table, maps, tx)
+	return
 }
 
 // GetUser 对查询用户信息的方法再次封装，补充消息
@@ -53,12 +26,11 @@ func GetUser(id int64) (code int, res *model.User) {
 		[]string{"*"},
 		&res,
 	)
-	res.UpdateShow("02-01-2006")
 	return code, res
 }
 func GetUserName(UserId int64) (code int, res string) {
 	var userNameUint8 interface{}
-	if code, userNameUint8 = GetTableItem(USERTABLE, UserId, "name"); code != errmsg.SUCCESS {
+	if code, userNameUint8 = GetTableItemById(USERTABLE, UserId, "name"); code != errmsg.SUCCESS {
 		return
 	}
 	res = fmt.Sprintf("%s", userNameUint8)

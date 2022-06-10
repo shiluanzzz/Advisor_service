@@ -11,11 +11,7 @@ import (
 func GetBillController(ctx *gin.Context) {
 	var code int
 	var response []*model.Bill
-	defer func() {
-		commonControllerDefer(ctx, &code, nil, ctx.GetInt64("id"), response)
-		//logger.CommonControllerLog(&code, nil, ctx.GetInt64("id"), response)
-		//commonReturn(ctx, code, "", response)
-	}()
+	defer commonControllerDefer(ctx, &code, nil, ctx.GetInt64("id"), &response)
 	code, response = service.GetBill(ctx.GetInt64("id"), ctx.GetString("role"))
 
 	// 完善一些展示信息

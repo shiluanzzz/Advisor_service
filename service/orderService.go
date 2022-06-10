@@ -9,7 +9,6 @@ import (
 	"service-backend/utils/errmsg"
 	"service-backend/utils/logger"
 	"service-backend/utils/tools"
-	"time"
 )
 
 var ORDERTABLE = "user_order"
@@ -48,39 +47,31 @@ func NewOrderAndCostTrans(data *model.Order) (code int, id int64) {
 
 // NewOrder 新建订单
 func NewOrder(model *model.Order, tx *sql.Tx) (code int, id int64) {
-	// 转化数据并生成sql语句AAA
-	var userMap map[string]interface{}
-	var data []map[string]interface{}
-	// 转化为map
-	userMap = tools.Structs2SQLTable(model)
-	delete(userMap, "token")
-	data = append(data, userMap)
-	code, id = InsertTableItem(ORDERTABLE, data, tx)
+	maps := []map[string]interface{}{tools.Structs2SQLTable(model)}
+	code, id = InsertTableItem(ORDERTABLE, maps, tx)
 	return errmsg.SUCCESS, id
 }
 
 // CostUserCoin 扣掉用户的金币
-func CostUserCoin(model *model.Order, tx *sql.Tx) (code int) {
-	cond := "update `user` set coin = coin - ? where id = ?"
-	code, _ = SQLExec(cond, []interface{}{model.Coin, model.UserId}, tx)
+func CostUserCoin(data *model.Order, tx *sql.Tx) (code int) {
+	cond := fmt.Sprintf("update `%s` set coin = coin - ? where id = ?", USERTABLE)
+	code, _, _ = SQLExec(cond, []interface{}{data.Coin, data.UserId}, tx)
 	return
 }
 
 // ReplyOrderServiceTrans 事务提交 订单回复服务
 func ReplyOrderServiceTrans(data *model.OrderReply) (code int) {
-	begin, err := utils.DbConn.Begin()
-	defer CommonTranDefer(&code, begin)
+	tran, err := utils.DbConn.Begin()
+	defer CommonTranDefer(&code, tran)
 	if err != nil {
-		code = errmsg.ErrorSqlTransError
-		return
+		return errmsg.ErrorSqlTransError
 	}
 
 	// 回复订单并标记订单为完成状态
-	code = UpdateTableItemById(ORDERTABLE, data.Id, map[string]interface{}{
+	if code = UpdateTableItemById(ORDERTABLE, data.Id, map[string]interface{}{
 		"reply":  data.Reply,
 		"status": model.Completed,
-	}, begin)
-	if code != errmsg.SUCCESS {
+	}, tran); code != errmsg.SUCCESS {
 		return
 	}
 	// 增加顾问的金币
@@ -88,7 +79,7 @@ func ReplyOrderServiceTrans(data *model.OrderReply) (code int) {
 	if data.Status == model.Rush {
 		reward += data.RushCoin
 	}
-	if code = AddCoin2Advisor(data, begin); code != errmsg.SUCCESS {
+	if code = AddCoin2Advisor(data, tran); code != errmsg.SUCCESS {
 		return
 	}
 	// 用户新增流水
@@ -98,11 +89,11 @@ func ReplyOrderServiceTrans(data *model.OrderReply) (code int) {
 		Amount:    reward,
 		Type:      model.ORDERINCOME,
 	}
-	if code = NewBill(&bill, begin); code != errmsg.SUCCESS {
+	if code = NewBill(&bill, tran); code != errmsg.SUCCESS {
 		return
 	}
 	// 事务终于结束了ho
-	err = begin.Commit()
+	err = tran.Commit()
 	if err != nil {
 		return errmsg.ErrorSqlTransCommitError
 	}
@@ -112,30 +103,30 @@ func ReplyOrderServiceTrans(data *model.OrderReply) (code int) {
 // AddCoin2Advisor 在顾问回复订单后为顾问增加金币
 func AddCoin2Advisor(data *model.OrderReply, tx *sql.Tx) (code int) {
 	cond := fmt.Sprintf("update %s set coin=coin + ? where id= ?", ADVISORTABLE)
-	code, _ = SQLExec(cond, []interface{}{data.Coin, data.AdvisorId}, tx)
+	code, _, _ = SQLExec(cond, []interface{}{data.Coin, data.AdvisorId}, tx)
 	return errmsg.SUCCESS
 }
 
 func RushOrderTrans(data *model.OrderRush) (code int) {
-	begin, err := utils.DbConn.Begin()
-	defer CommonTranDefer(&code, begin)
+	tran, err := utils.DbConn.Begin()
+	defer CommonTranDefer(&code, tran)
 	if err != nil {
-		code = errmsg.ErrorSqlTransError
-		return
+		return errmsg.ErrorSqlTransError
 	}
 
 	// 修改订单状态为加急
-	code = UpdateTableItemById(ORDERTABLE, data.Id, map[string]interface{}{
+	if code = UpdateTableItemById(ORDERTABLE, data.Id, map[string]interface{}{
 		"status":    model.Rush,
 		"rush_time": data.RushTime,
-	}, begin)
-	if code != errmsg.SUCCESS {
-		return code
+	}, tran); code != errmsg.SUCCESS {
+		return
 	}
 	// 修改用户金币
-	code = UpdateTableItemById(USERTABLE, data.UserId, map[string]interface{}{
+	if code = UpdateTableItemById(USERTABLE, data.UserId, map[string]interface{}{
 		"coin": data.UserMoney - data.RushMoney,
-	}, begin)
+	}, tran); code != errmsg.SUCCESS {
+		return
+	}
 	//提交流水
 	bill := model.Bill{
 		UserId:  data.UserId,
@@ -144,16 +135,12 @@ func RushOrderTrans(data *model.OrderRush) (code int) {
 		Type:    model.ORDERRUSHCOST,
 	}
 	// 加急订单支出
-	if code = NewBill(&bill, begin); code != errmsg.SUCCESS {
+	if code = NewBill(&bill, tran); code != errmsg.SUCCESS {
 		return
 	}
 
-	if code != errmsg.SUCCESS {
-		return code
-	}
 	// 事务结束 commit.
-	err = begin.Commit()
-	if err != nil {
+	if err = tran.Commit(); err != nil {
 		code = errmsg.ErrorSqlTransCommitError
 	}
 	return errmsg.SUCCESS
@@ -176,11 +163,10 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus model.OrderStat
 	Tran, err := utils.DbConn.Begin()
 	defer CommonTranDefer(&code, Tran)
 	if err != nil {
-		code = errmsg.ErrorSqlTransError
-		return code
+		return errmsg.ErrorSqlTransError
 	}
 	// 获取原始状态
-	var orderInSql model.Order
+	var orderInSql *model.Order
 	if code, orderInSql = GetOrder(orderId); code != errmsg.SUCCESS {
 		return
 	}
@@ -195,11 +181,11 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus model.OrderStat
 		return code
 	}
 
-	code, userMoney := GetTableItem(USERTABLE, userId, "coin", Tran)
+	code, userMoney := GetTableItemById(USERTABLE, userId, "coin", Tran)
 	if code != errmsg.SUCCESS {
 		return code
 	}
-	// 退回用户的金币增加逻辑
+
 	// 退回用户金币的逻辑
 	originCoin := userMoney.(int64)
 	var backCoin int64
@@ -250,36 +236,26 @@ func ChangeOrderStatus(orderId int64, userId int64, originStatus model.OrderStat
 	}
 
 	// 提交事务
-	err = Tran.Commit()
-	if err != nil {
-		code = errmsg.ErrorSqlTransCommitError
-		return code
+	if err = Tran.Commit(); err != nil {
+		return errmsg.ErrorSqlTransCommitError
 	}
 	return errmsg.SUCCESS
 }
 
 func GetAdvisorOrderList(advisorId int64) (code int, res []*model.Order) {
-	where := map[string]interface{}{
-		"advisor_id": advisorId,
-	}
+
+	where := map[string]interface{}{"advisor_id": advisorId}
 	selects := []string{"id", "user_id", "service_id", "service_name_id",
 		"status", "question", "situation", "advisor_id", "create_time"}
 	if code = GetTableRows2StructByWhere(ORDERTABLE, where, selects, &res); code != errmsg.SUCCESS {
 		return
 	}
-	// 附加信息:用户名、时间格式、服务类型
-	for _, v := range res {
-		v.ShowTime = time.Unix(v.CreateTime, 0).Format("Jan 02,2006")
-		_, v.UserName = GetUserName(v.UserId)
-		v.ServiceName = model.ServiceKind[v.ServiceNameId]
-		v.ServiceStatusName = v.Status.StatusName()
-	}
-	return code, res
+
+	return errmsg.SUCCESS, res
 }
-func GetOrder(orderId int64) (code int, res model.Order) {
-	where := map[string]interface{}{
-		"id": orderId,
-	}
+func GetOrder(orderId int64) (code int, res *model.Order) {
+
+	where := map[string]interface{}{"id": orderId}
 	if code = GetTableRows2StructByWhere(ORDERTABLE, where, []string{"*"}, &res); code != errmsg.SUCCESS {
 		return
 	}
@@ -295,7 +271,7 @@ func GetAdvisorOrderScore(id int64) (code int, score float32) {
 		"comment_status": model.Commented,
 	}
 	selects := []string{"rate"}
-	code, data := GetManyTableItemsByWhere(ORDERTABLE, where, selects)
+	code, data := GetTableItemsByWhere(ORDERTABLE, where, selects)
 	if code != errmsg.SUCCESS {
 		return
 	}

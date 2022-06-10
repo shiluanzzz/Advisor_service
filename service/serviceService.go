@@ -11,10 +11,8 @@ import (
 
 var SERVICETABLE = "service"
 
-func GetService(serviceId int64) (code int, res model.Service) {
-	where := map[string]interface{}{
-		"id": serviceId,
-	}
+func GetService(serviceId int64) (code int, res *model.Service) {
+	where := map[string]interface{}{"id": serviceId}
 	code = GetTableRows2StructByWhere(SERVICETABLE, where, []string{"*"}, &res)
 
 	return errmsg.SUCCESS, res

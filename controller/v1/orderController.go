@@ -39,8 +39,7 @@ func NewOrderController(ctx *gin.Context) {
 	defer func() {
 		orderInfo.OrderId = response.Id
 		orderInfo.UserId = response.UserId
-		logger.CommonControllerLog(&code, &msg, orderInfo, response)
-		commonReturn(ctx, code, msg, orderInfo)
+		defer commonControllerDefer(ctx, &code, &msg, &orderInfo, &response)
 	}()
 	// 数据基本校验
 	if msg, code = validator.Validate(orderInfo); code != errmsg.SUCCESS {
@@ -48,11 +47,11 @@ func NewOrderController(ctx *gin.Context) {
 	}
 	// 取sql数据做校验
 	response.UserId = ctx.GetInt64("id")
-	var serviceInSQL model.Service
+	var serviceInSQL *model.Service
 	if code, serviceInSQL = service.GetService(response.ServiceId); code != errmsg.SUCCESS {
 		return
 	}
-	var UserInSQL model.User
+	var UserInSQL *model.User
 	if code, UserInSQL = service.GetUser(response.UserId); code != errmsg.SUCCESS {
 		return
 	}
@@ -108,11 +107,19 @@ func GetOrderListController(ctx *gin.Context) {
 	var response []*model.Order
 	var code int
 	var msg string
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, ctx.GetInt64("id"), response)
-		commonReturn(ctx, code, "", response)
-	}()
-	code, response = service.GetAdvisorOrderList(ctx.GetInt64("id"))
+	defer commonControllerDefer(ctx, &code, &msg, ctx.GetInt64("id"), &response)
+
+	if code, response = service.GetAdvisorOrderList(ctx.GetInt64("id")); code != errmsg.SUCCESS {
+		return
+	}
+
+	// 附加信息:用户名、时间格式、服务类型
+	for _, v := range response {
+		v.ShowTime = time.Unix(v.CreateTime, 0).Format("Jan 02,2006")
+		v.ServiceName = model.ServiceKind[v.ServiceNameId]
+		v.ServiceStatusName = v.Status.StatusName()
+		_, v.UserName = service.GetUserName(v.UserId)
+	}
 	return
 }
 
@@ -173,21 +180,18 @@ func OrderReplyController(ctx *gin.Context) {
 		ginBindError(ctx, err, data)
 		return
 	}
+	defer commonControllerDefer(ctx, &code, &msg, &data, &response)
+
 	//基础校验 回复长度
 	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
-		commonReturn(ctx, code, msg, data)
 		return
 	}
-	// return
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, response)
-		commonReturn(ctx, code, "", response)
-	}()
+
 	// 逻辑校验+service层提交
 	code, response = func() (code int, response model.OrderReply) {
 
 		data.AdvisorId = ctx.GetInt64("id")
-		var orderInSql model.Order
+		var orderInSql *model.Order
 		if code, orderInSql = service.GetOrder(data.Id); code != errmsg.SUCCESS {
 			return code, data
 		}
@@ -233,18 +237,15 @@ func RushOrderController(ctx *gin.Context) {
 		ginBindError(ctx, err, data)
 		return
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, "", data)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, &data, &data)
 
 	data.UserId = ctx.GetInt64("id")
-	var orderInSql model.Order
+	var orderInSql *model.Order
 	var userMoney interface{}
 	if code, orderInSql = service.GetOrder(data.Id); code != errmsg.SUCCESS {
 		return
 	}
-	if code, userMoney = service.GetTableItem(service.USERTABLE, data.UserId, "coin"); code != errmsg.SUCCESS {
+	if code, userMoney = service.GetTableItemById(service.USERTABLE, data.UserId, "coin"); code != errmsg.SUCCESS {
 		return
 	}
 	/*  ---  逻辑校验  ---  */
@@ -301,6 +302,7 @@ func CommentOrderController(ctx *gin.Context) {
 		return
 	}
 	// defer return
+	defer commonControllerDefer(ctx, &code, &msg, &comment, &data)
 	defer func() {
 		logger.CommonControllerLog(&code, &msg, comment, data)
 		commonReturn(ctx, code, msg, data)
@@ -320,7 +322,7 @@ func CommentOrderController(ctx *gin.Context) {
 		CommentTime: time.Now().Unix(),
 	}
 	/*  ---  逻辑校验  ---  */
-	var orderInSql model.Order
+	var orderInSql *model.Order
 	if code, orderInSql = service.GetOrder(data.Id); code != errmsg.SUCCESS {
 		return
 	}

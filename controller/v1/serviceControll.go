@@ -52,10 +52,7 @@ func ModifyServicePrice(ctx *gin.Context) {
 		ginBindError(ctx, err, data)
 		return
 	}
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, data)
-		commonReturn(ctx, code, msg, data)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, &data, &data)
 
 	data.AdvisorId = ctx.GetInt64("id")
 	// 数据校验

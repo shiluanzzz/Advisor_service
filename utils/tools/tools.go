@@ -53,6 +53,12 @@ func WhoCallMe() string {
 	return runtime.FuncForPC(pc).Name()
 }
 
+// WhoAmI 我是谁往上跳一层
+func WhoAmI() string {
+	pc, _, _, _ := runtime.Caller(1)
+	return runtime.FuncForPC(pc).Name()
+}
+
 // Structs2SQLTable 将结构体实例中的带有structs tag字段的值提取为map
 func Structs2SQLTable(s interface{}) map[string]interface{} {
 	out := structs.Map(s)

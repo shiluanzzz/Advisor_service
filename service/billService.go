@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"service-backend/model"
 	"service-backend/utils/errmsg"
-	"service-backend/utils/logger"
 	"service-backend/utils/tools"
 	"time"
 )
@@ -13,7 +12,6 @@ const BILLTABLE = "bill"
 
 func NewBill(data *model.Bill, tx ...*sql.Tx) (code int) {
 	data.Time = time.Now().Unix()
-	defer logger.CommonServiceLog(&code, data, "msg", "新增了一笔流水")
 	maps := []map[string]interface{}{tools.Structs2SQLTable(data)}
 	code, _ = InsertTableItem(BILLTABLE, maps, tx...)
 	return
@@ -32,6 +30,5 @@ func GetBill(id int64, role string) (code int, res []*model.Bill) {
 		return
 	}
 	code = GetTableRows2StructByWhere(BILLTABLE, where, []string{"*"}, &res)
-
 	return
 }

@@ -73,6 +73,6 @@ type CommentStruct struct {
 }
 
 type OrderDetail struct {
-	Order `json:"order"`
-	User  `json:"user"`
+	*Order `json:"order"`
+	*User  `json:"user"`
 }

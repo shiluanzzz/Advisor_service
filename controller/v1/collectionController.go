@@ -5,7 +5,6 @@ import (
 	"service-backend/model"
 	"service-backend/service"
 	"service-backend/utils/errmsg"
-	"service-backend/utils/logger"
 	"service-backend/utils/validator"
 )
 
@@ -14,10 +13,8 @@ func NewCollectionController(ctx *gin.Context) {
 	var code int
 	var msg string
 	var response *model.Collection
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, data, response)
-		commonReturn(ctx, code, msg, response)
-	}()
+
+	defer commonControllerDefer(ctx, &code, &msg, &data, &response)
 	if err := ctx.ShouldBindQuery(&data); err != nil {
 		ginBindError(ctx, err, data)
 	}
@@ -50,10 +47,7 @@ func GetUserCollectionController(ctx *gin.Context) {
 	var code int
 	var msg string
 	var res []*model.Collection
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, nil, res)
-		commonReturn(ctx, code, msg, res)
-	}()
+	defer commonControllerDefer(ctx, &code, &msg, nil, res)
 	code, res = service.GetUserCollection(ctx.GetInt64("id"))
 	return
 }

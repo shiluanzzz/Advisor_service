@@ -34,6 +34,11 @@ func commonControllerDefer(ctx *gin.Context, code *int, msg *string, request int
 	if reflect.TypeOf(data).Kind() != reflect.Ptr {
 		logger.Log.Warn("接口应当传递指针", zap.String("function", tools.WhoCallMe()))
 	}
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Log.Error("controller层Panic", zap.String("err", fmt.Sprintf("%v", err)), zap.String("function", tools.WhoCallMe()))
+		}
+	}()
 	logger.CommonControllerLog(code, msg, request, data)
 	commonReturn(ctx, *code, *msg, data)
 }

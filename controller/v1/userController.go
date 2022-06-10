@@ -43,7 +43,7 @@ func UpdateUserInfoController(ctx *gin.Context) {
 	res["id"] = ctx.GetInt64("id")
 	// 检查手机号是否重复
 	if res["phone"] != nil {
-		code, value := service.GetTableItem(service.USERTABLE, res["id"].(int64), "phone")
+		code, value := service.GetTableItemById(service.USERTABLE, res["id"].(int64), "phone")
 		// 电话号码有变动
 		if fmt.Sprintf("%s", value) != *(res["phone"].(*string)) {
 			code = service.CheckPhoneExist(service.USERTABLE, res["phone"])
@@ -108,5 +108,7 @@ func GetUserInfoController(ctx *gin.Context) {
 	defer commonControllerDefer(ctx, &code, nil, &id, &response)
 
 	code, response = service.GetUser(id)
+	response.UpdateShow("02-01-2006")
+
 	return
 }
