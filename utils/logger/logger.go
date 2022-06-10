@@ -121,7 +121,8 @@ func commonLog(kind model.LogType, code *int, args ...interface{}) {
 		zap.String("LogType", kind.StatusName()),
 	}
 	for i := 0; i < len(args)-1; i += 2 {
-		fields = append(fields, zap.String(fmt.Sprintf("%v", args[i]), fmt.Sprintf("%v", args[i+1])))
+
+		fields = append(fields, zap.String(fmt.Sprintf("%#v", tools.GetInterfacePtrElem(args[i])), fmt.Sprintf("%v", tools.GetInterfacePtrElem(args[i+1]))))
 	}
 	switch *code {
 	case errmsg.SUCCESS:

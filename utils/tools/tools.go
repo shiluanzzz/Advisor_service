@@ -71,3 +71,12 @@ func Structs2SQLTable(s interface{}) map[string]interface{} {
 	}
 	return out
 }
+
+// GetInterfacePtrElem 将指针类型的interface 提取为对象
+func GetInterfacePtrElem(s interface{}) interface{} {
+
+	if s != nil && reflect.TypeOf(s).Kind() == reflect.Ptr {
+		s = reflect.ValueOf(s).Elem()
+	}
+	return s
+}

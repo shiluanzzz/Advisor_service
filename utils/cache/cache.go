@@ -96,7 +96,7 @@ func get(key string) (code int, res []byte) {
 	defer func() {
 		fields := []zapcore.Field{
 			zap.String("key", key),
-			zap.String("data", fmt.Sprintf("%v", res)),
+			zap.String("data", fmt.Sprintf("%#v", res)),
 			zap.Error(err),
 		}
 		if code == errmsg.SUCCESS {
