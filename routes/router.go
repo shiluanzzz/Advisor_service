@@ -62,12 +62,14 @@ func InitRouter() {
 	{
 		collection.GET("/list", v1.GetUserCollectionController)
 		collection.POST("/add", v1.NewCollectionController)
+		collection.DELETE("", v1.DeleteUserCollection)
 	}
 	bill := r.Group("bill")
 	bill.Use(middleware.JwtToken())
 	{
 		bill.GET("", v1.GetBillController)
 	}
+
 	logger.Log.Info("服务启动")
 	err := r.Run(setting.Server.HttpPort)
 	if err != nil {

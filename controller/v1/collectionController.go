@@ -47,7 +47,24 @@ func GetUserCollectionController(ctx *gin.Context) {
 	var code int
 	var msg string
 	var res []*model.Collection
-	defer commonControllerDefer(ctx, &code, &msg, nil, res)
+	defer commonControllerDefer(ctx, &code, &msg, nil, &res)
 	code, res = service.GetUserCollection(ctx.GetInt64("id"))
+	return
+}
+func DeleteUserCollection(ctx *gin.Context) {
+	var data *model.TableID
+	var code int
+	var msg string
+	defer commonControllerDefer(ctx, &code, &msg, &data, &data)
+	if err := ctx.ShouldBindQuery(&data); err != nil {
+		ginBindError(ctx, err, data)
+	}
+	if msg, code = validator.Validate(data); code != errmsg.SUCCESS {
+		return
+	}
+	code = service.DeleteTableRowByWhere(service.COLLECTIONTABLE, map[string]interface{}{
+		"user_id":    ctx.GetInt64("id"),
+		"advisor_id": data.Id,
+	})
 	return
 }

@@ -129,10 +129,11 @@ func GetOrderDetailController(ctx *gin.Context) {
 	var response model.OrderDetail
 	var code int
 	var msg string
-	var cacheKey = cache.GetOrderKey(request.Id)
 	if err := ctx.ShouldBindQuery(&request); err != nil {
 		ginBindError(ctx, err, request)
 	}
+
+	var cacheKey = cache.GetOrderKey(request.Id)
 	// return
 	defer commonControllerDefer(ctx, &code, &msg, &request, &response)
 
@@ -303,10 +304,10 @@ func CommentOrderController(ctx *gin.Context) {
 	}
 	// defer return
 	defer commonControllerDefer(ctx, &code, &msg, &comment, &data)
-	defer func() {
-		logger.CommonControllerLog(&code, &msg, comment, data)
-		commonReturn(ctx, code, msg, data)
-	}()
+	//defer func() {
+	//	logger.CommonControllerLog(&code, &msg, comment, data)
+	//	commonReturn(ctx, code, msg, data)
+	//}()
 	// 数据基本校验
 	msg, code = validator.Validate(comment)
 	if code != errmsg.SUCCESS {

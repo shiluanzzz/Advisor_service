@@ -51,6 +51,9 @@ func GetTableItemByWhere(tableName string, where map[string]interface{}, fieldNa
 	if code, results = SQLQuery(cond, values, tx...); code != errmsg.SUCCESS {
 		return
 	}
+	if len(results) == 0 {
+		return errmsg.ErrorNoResult, nil
+	}
 	// TODO 测试
 	return errmsg.SUCCESS, results[0][fieldName]
 }
@@ -159,6 +162,24 @@ func GetTableRows2StructByWhere(tableName string, where map[string]interface{}, 
 			return errmsg.ErrorNoResult
 		}
 		return errmsg.ErrorSqlScanner
+	}
+	return errmsg.SUCCESS
+}
+func DeleteTableRowByWhere(tableName string, where map[string]interface{}, tx ...*sql.Tx) (code int) {
+	defer func() {
+		msg := fmt.Sprintf("从表 [%s] 根据 [%v] 删除数据", tableName, where)
+		logger.CommonServiceLog(&code, msg)
+	}()
+	cond, values, err := qb.BuildDelete(tableName, where)
+	if err != nil {
+		logger.GendryBuildError(err)
+	}
+	code, _, affects := SQLExec(cond, values, tx...)
+	if code != errmsg.SUCCESS {
+		return code
+	}
+	if affects == 0 {
+		return errmsg.ErrorNoResult
 	}
 	return errmsg.SUCCESS
 }
