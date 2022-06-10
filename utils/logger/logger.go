@@ -105,8 +105,8 @@ func SqlError(err error, args ...interface{}) {
 }
 
 // CommonControllerLog 控制层的defer Log
-func CommonControllerLog(code *int, msg *string, requests interface{}, response interface{}) {
-	commonLog(model.ControllerLog, code, "function", tools.WhoCallMe(), "msg", msg, "requests", requests, "response", response)
+func CommonControllerLog(code *int, msg *string, requests interface{}, response interface{}, args ...interface{}) {
+	commonLog(model.ControllerLog, code, "msg", msg, "requests", requests, "response", response, args)
 }
 
 // CommonServiceLog 服务层的defer Log
